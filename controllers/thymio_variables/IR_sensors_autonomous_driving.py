@@ -31,8 +31,8 @@ for i in range(7):
 print("Sampling period : ", timestep, "ms")
 
 # --- Parameters ---
-FORWARD_SPEED = 2.0
-TURN_SPEED = 1.0
+FORWARD_SPEED = 8.0
+TURN_SPEED = 4.0
 
 # Seuils d'obstacle
 FRONT_THRESHOLD = 150
@@ -84,14 +84,14 @@ while robot.step(timestep) != -1:
     elif left > FRONT_THRESHOLD or far_left > SIDE_THRESHOLD:
         motor_left.setVelocity(TURN_SPEED)
         motor_right.setVelocity(0.0)
-        wait_ms(500)
+        wait_ms(100)
         print("turning right !")
     
     # 3 - right wall near
     elif right > FRONT_THRESHOLD or far_right > SIDE_THRESHOLD:
         motor_left.setVelocity(0.0)
         motor_right.setVelocity(TURN_SPEED)
-        wait_ms(500)
+        wait_ms(100)
         print("turning left !")
     
     # 4 - drive
