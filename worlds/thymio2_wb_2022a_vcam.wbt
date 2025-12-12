@@ -1,0 +1,236 @@
+#VRML_SIM R2025a utf8
+
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/3e6ea77604ac443d9f36f74e2a17836a017b8915/projects/objects/floors/protos/CircleArena.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/3e6ea77604ac443d9f36f74e2a17836a017b8915/projects/appearances/protos/Roughcast.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/3e6ea77604ac443d9f36f74e2a17836a017b8915/projects/objects/backgrounds/protos/TexturedBackground.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/3e6ea77604ac443d9f36f74e2a17836a017b8915/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/3e6ea77604ac443d9f36f74e2a17836a017b8915/projects/robots/mobsya/thymio/protos/Thymio2.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/3e6ea77604ac443d9f36f74e2a17836a017b8915/projects/objects/apartment_structure/protos/Wall.proto"
+
+WorldInfo {
+  basicTimeStep 10
+  contactProperties [
+    ContactProperties {
+      material2 "thymio body"
+      coulombFriction [
+        0.7
+      ]
+    }
+  ]
+}
+Viewpoint {
+  orientation 0.637377477445308 -0.049022870895325955 -0.7689907082498696 3.357131828568819
+  position 0.7242411765619016 -0.5788627500802682 2.8704090824629502
+}
+TexturedBackground {
+}
+TexturedBackgroundLight {
+}
+CircleArena {
+}
+Wall {
+  translation -0.16 0.23 0
+  size 0.01 1 0.1
+  appearance Roughcast {
+    colorOverride 0 1 0
+    textureTransform TextureTransform {
+      scale 2.4 1
+    }
+  }
+}
+Wall {
+  translation 0.05 0.73 0
+  name "wall(12)"
+  size 0.43 0.01 0.1
+  appearance Roughcast {
+    colorOverride 0 1 0
+    textureTransform TextureTransform {
+      scale 2.4 1
+    }
+  }
+}
+Wall {
+  translation 0.25 0 0
+  name "wall(5)"
+  size 0.4 0.01 0.1
+}
+Wall {
+  translation 0.0732246 -0.0387871 0
+  rotation 0 0 1 0.785398
+  name "wall(1)"
+  size 0.1 0.01 0.1
+}
+Wall {
+  translation 0.631834 -0.215563 0
+  rotation 0 0 1 0.785398
+  name "wall(21)"
+  size 0.1 0.01 0.1
+}
+Wall {
+  translation 0.0732248 0.0319252 0
+  rotation 0 0 1 2.35619
+  name "wall(11)"
+  size 0.1 0.01 0.1
+}
+Wall {
+  translation 0.631834 0.2087 0
+  rotation 0 0 1 2.35619
+  name "wall(22)"
+  size 0.1 0.01 0.1
+}
+Wall {
+  translation 0.242929 0.696599 0
+  rotation 0 0 1 2.35619
+  name "wall(20)"
+  size 0.1 0.01 0.1
+}
+Wall {
+  translation -0.124765 0.696599 0
+  rotation 0 0 1 0.785398
+  name "wall(10)"
+  size 0.1 0.01 0.1
+}
+Wall {
+  translation 0.214645 -0.717604 0
+  rotation 0 0 1 -2.3561953071795863
+  name "wall(2)"
+  size 0.1 0.01 0.1
+}
+Wall {
+  translation 0.00251402 -0.47719 0
+  rotation 0 0 1 -2.3561953071795863
+  name "wall(4)"
+  size 0.1 0.01 0.1
+}
+Wall {
+  translation -0.612664 -0.314557 0
+  rotation 0 0 1 -2.3561953071795863
+  name "wall(9)"
+  size 0.1 0.01 0.1
+}
+Wall {
+  translation -0.612664 -0.710533 0
+  rotation 0 0 1 2.35619
+  name "wall(3)"
+  size 0.1 0.01 0.1
+}
+Wall {
+  translation -0.4 -0.27 0
+  name "wall(8)"
+  size 0.49 0.01 0.1
+  appearance Roughcast {
+    colorOverride 0 1 0
+    textureTransform TextureTransform {
+      scale 2.4 1
+    }
+  }
+}
+Wall {
+  translation -0.16 -0.51 0
+  name "wall(7)"
+  size 0.4 0.01 0.1
+}
+Wall {
+  translation 0.46 -0.25 0
+  name "wall(15)"
+  size 0.43 0.01 0.1
+  appearance Roughcast {
+    colorOverride 0 1 0
+    textureTransform TextureTransform {
+      scale 2.4 1
+    }
+  }
+}
+Wall {
+  translation -0.2 -0.75 0
+  name "wall(18)"
+  size 0.9 0.01 0.1
+  appearance Roughcast {
+    colorOverride 0 1 0
+    textureTransform TextureTransform {
+      scale 2.4 1
+    }
+  }
+}
+Wall {
+  translation 0.47 0.25 0
+  name "wall(14)"
+  size 0.4 0.01 0.1
+  appearance Roughcast {
+    colorOverride 0 1 0
+    textureTransform TextureTransform {
+      scale 2.4 1
+    }
+  }
+}
+Wall {
+  translation 0.04 -0.01 0
+  name "wall(17)"
+  size 0.01 1 0.1
+}
+Wall {
+  translation 0.25 -0.5 0
+  name "wall(16)"
+  size 0.01 0.5 0.1
+  appearance Roughcast {
+    colorOverride 0 1 0
+    textureTransform TextureTransform {
+      scale 2.4 1
+    }
+  }
+}
+Wall {
+  translation -0.65 -0.5 0
+  name "wall(19)"
+  size 0.01 0.5 0.1
+  appearance Roughcast {
+    colorOverride 0 1 0
+    textureTransform TextureTransform {
+      scale 2.4 1
+    }
+  }
+}
+Wall {
+  translation 0.27 0.49 0
+  name "wall(13)"
+  size 0.01 0.48 0.1
+  appearance Roughcast {
+    colorOverride 0 1 0
+    textureTransform TextureTransform {
+      scale 2.4 1
+    }
+  }
+}
+Wall {
+  translation 0.67 0 0
+  name "wall(6)"
+  size 0.01 0.5 0.1
+  appearance Roughcast {
+    colorOverride 0 1 0
+    textureTransform TextureTransform {
+      scale 2.4 1
+    }
+  }
+}
+Thymio2 {
+  hidden position_0_0 7569.234461655065
+  hidden position_0_1 8687.730096826754
+  hidden rotation_1 0.21003859000399752 0.21003865886931292 -0.9548652012140315 4.666220337963353
+  hidden rotation_2 0.16888251092065362 0.1688825783103342 -0.9710599220688645 4.683026148564244
+  translation 0.15175808458858348 -0.15452821361146335 -2.009997452737111e-05
+  rotation 0.004753842873295422 0.0012795654704826677 0.9999878817716457 -2.6158209158583317
+  controller "thymio_variables"
+  bodySlot [
+    Camera {
+      translation 0 0 0.08
+    }
+    Lidar {
+      translation 0 0 0.05
+      horizontalResolution 360
+      fieldOfView 6.28
+      numberOfLayers 1
+      noise 0.001
+      resolution 0.017
+    }
+  ]
+}
