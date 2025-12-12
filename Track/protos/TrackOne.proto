@@ -5,13 +5,11 @@ PROTO TrackOne [
   field SFRotation rotation     0 1 0 0
 ]
 {
-  Solid {
+  Transform {
+      scale 0.0055 0.0055 0.0055
       translation IS translation
       rotation IS rotation
       children [
-        Solid {
-          name "obj_0"
-        }
         Solid {
           children [
             Shape {
