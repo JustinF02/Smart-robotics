@@ -39,6 +39,13 @@ motor_right = robot.getDevice("motor.right");
 motor_left.setPosition(float('inf'))
 motor_right.setPosition(float('inf'))
 
+# odométrie
+ps_left = robot.getDevice("motor.left.sensor")
+ps_right = robot.getDevice("motor.right.sensor")
+ps_left.enable(timestep)
+ps_right.enable(timestep)
+
+
 print("Sampling period : ",timestep,"ms")
 
 motor_left.setVelocity(robot_speed)
@@ -50,24 +57,52 @@ def wait_ms(duration_ms):
     while elapsed < duration_ms:
         robot.step(timestep)
         elapsed += timestep
+        
+def turn(angle_deg, speed=1.0):
+    print("turning")
+    target_rad = math.radians(angle_deg)
 
+    # Lire position initiale
+    left0 = ps_left.getValue()
+    right0 = ps_right.getValue()
+
+    # Déterminer sens de rotation
+    if target_rad > 0:     # tourner à droite
+        motor_left.setVelocity(speed)
+        motor_right.setVelocity(-speed)
+    else:                  # tourner à gauche
+        motor_left.setVelocity(-speed)
+        motor_right.setVelocity(speed)
+
+    # Boucle jusqu'à atteindre l’angle voulu
+    while robot.step(timestep) != -1:
+        left = ps_left.getValue()
+        right = ps_right.getValue()
+
+        dL = (left - left0) * wheel_radius
+        dR = (right - right0) * wheel_radius
+
+        theta = (dR - dL) / track_width   # orientation estimée
+
+        if abs(theta) >= abs(target_rad):
+            break
+
+    # Stop
+    motor_left.setVelocity(0)
+    motor_right.setVelocity(0)
+    
 while (robot.step(timestep) != -1):
   
   #Set motors speed :
-  motor_left.setVelocity(robot_speed)
-  motor_right.setVelocity(robot_speed)
-
-
-  # avancer de 1 carreau
-  wait_ms(3500)
-
-  #on tourne à 90°
-  motor_left.setVelocity(0.0)
-  motor_right.setVelocity(robot_speed)
-  
-  #tourner
-  wait_ms(3500)
-
+  motor_left.setVelocity(1)
+  motor_right.setVelocity(1)
+  wait_ms(1000)
+    
+  # Tourner de 90°
+  turn(90, speed=1)
+    
+  # Tourner de -45°
+  turn(-45, speed=1)
   # Process sensor data here
 
   # Enter here functions to send actuator commands, like:
