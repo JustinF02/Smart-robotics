@@ -140,7 +140,7 @@ while (robot.step(timestep) != -1):
 
   x = x + delta_s * math.cos(theta + delta_theta / 2.0)
   y = y + delta_s * math.sin(theta + delta_theta / 2.0)
-  theta = theta + delta_theta
+  theta = theta - delta_theta
 
   #print results
   print(chr(27) + "[2J")
