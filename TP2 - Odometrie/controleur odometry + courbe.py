@@ -1,25 +1,3 @@
-# Copyright 1996-2019 Cyberbotics Ltd.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-"""
-This controller gives to its node the following behavior:
-Listen the keyboard. According to the pressed key, send a
-message through an emitter or handle the position of Robot1.
-"""
-## Reference
-## https://www.cyberbotics.com/doc/guide/thymio2?version=develop
-
 import math
 from controller import Supervisor
 import matplotlib.pyplot as plt
@@ -56,17 +34,17 @@ def get_rotated_rect_corners(center_pos, size, angle_rad):
     cx, cy = center_pos
     w, h = size[0] / 2.0, size[1] / 2.0 # Demi-largeur et demi-hauteur
 
-    # Les 4 coins par rapport au centre (avant rotation)
-    # Coin bas-gauche (-w, -h), bas-droite (w, -h), haut-droite (w, h), haut-gauche (-w, h)
+    #calcul des coins des murs par rapport aux coordonnées et tailles
     corners_local = np.array([[-w, -h], [w, -h], [w, h], [-w, h]])
 
+    #position
     c, s = np.cos(angle_rad), np.sin(angle_rad)
     rot_matrix = np.array([[c, -s], [s, c]])
 
-    # On applique la rotation à chaque coin
+    #appliquer la matrice de rotation sur les coins
     rotated_corners = corners_local.dot(rot_matrix.T)
 
-    # On ajoute la position du centre pour les placer au bon endroit
+    #ajout du centre
     final_corners = rotated_corners + np.array([cx, cy])
 
     return final_corners
@@ -74,20 +52,17 @@ def get_rotated_rect_corners(center_pos, size, angle_rad):
 robot = Supervisor()
 robot_node = robot.getFromDef("Thymio")
 timestep = int(robot.getBasicTimeStep())
-delta_t = timestep / 1000.0
+delta_t = timestep / 1000.0 #en secondes
 keyboard = robot.getKeyboard()
 keyboard.enable(timestep)
 robot_speed = 0
 rotation_speed = 2
 
-# plot data
+#données pour le plot
 list_pos_x = []
 list_pos_y = []
 list_real_x = []
 list_real_y = []
-
-print(chr(27) + "[2J") # ANSI code for clearing command line
-print("Initialization of thymio_variables controller")
 
 motor_left = robot.getDevice("motor.left");
 motor_right = robot.getDevice("motor.right");
@@ -101,22 +76,18 @@ for i in range(7):
     sensor.enable(timestep)
     prox_sensors.append(sensor)
 
-#state variables for odometry
-x, y, theta = 0.151758, -0.154528, -2.615814835873021 
+#variables d'état
+x = 0.151758
+y = -0.154528
+theta = -2.615814835873021 
 e = 0.054
-r = 0.021
+r = 0.021       
 
-print("Sampling period : ",timestep,"ms")
-
-def wait_ms(duration_ms):
-    elapsed = 0
-    while elapsed < duration_ms:
-        robot.step(timestep)
-        elapsed += timestep
-       
-
+#init plot
 plt.ion()    
 plot_counter = 0
+
+#boucle du programme de contr^ple
 while (robot.step(timestep) != -1):
   real_pos = robot_node.getPosition() # [x, y, z] dans Webots
   list_real_x.append(real_pos[0])
@@ -127,22 +98,24 @@ while (robot.step(timestep) != -1):
 
   command = keyboard.getKey()
   
-  #odometry computation
+  #calcul vitesse roues
   v_l = motor_left.getVelocity() 
   v_r = motor_right.getVelocity()
   
-  
+  #delta de distance de roues
   delta_l = v_l * r * delta_t
   delta_r = v_r * r * delta_t
   
+  #modèle holomone
   delta_s = (delta_r + delta_l) / 2.0
   delta_theta = (delta_l - delta_r) / (2.0 * e)
 
+  #estimation de la position avec les delta
   x = x + delta_s * math.cos(theta + delta_theta / 2.0)
   y = y + delta_s * math.sin(theta + delta_theta / 2.0)
   theta = theta - delta_theta
 
-  #print results
+  #resultat
   print(chr(27) + "[2J")
   print(f"x : {x}cm / y: {y}cm")
   print(f"left motor speed :{v_l}")
@@ -150,12 +123,13 @@ while (robot.step(timestep) != -1):
   #print(command)
   print(f"forward command speed: {robot_speed}")
 
-  #Set motors speed :
+  #application de la commande
   left_speed = robot_speed
   right_speed = robot_speed
   #motor_left.setVelocity(left_speed)
   #motor_right.setVelocity(right_speed)
   
+  #controle clavier
   if command == keyboard.UP:
     robot_speed += 0.2
     if robot_speed > 6: robot_speed = 6
@@ -178,6 +152,7 @@ while (robot.step(timestep) != -1):
   motor_left.setVelocity(left_speed)
   motor_right.setVelocity(right_speed)
   
+  #affichage plot toutes les 10 itérations
   plot_counter += 1
   if plot_counter % 10 == 0:
     plt.clf()
@@ -190,14 +165,18 @@ while (robot.step(timestep) != -1):
         poly = Polygon(corners, closed=True, facecolor='red', edgecolor='darkred', alpha=0.7)
         ax.add_patch(poly)
 
-    
+    #position x y estimeée
     plt.plot(list_pos_x, list_pos_y, 'b-', linewidth=2, label='Trajectoire')
+
+    #position x y réelle
     plt.plot(list_real_x, list_real_y, 'g--', label='Réel')
+
+    #posiion instant t
     plt.plot(real_pos[0], real_pos[1], 'go')
     plt.plot(x, y, 'bo')
     plt.plot(x, y, 'bo', markersize=8)
 
-    
+    #taille fenetre
     plt.xlim(-3, 3)
     plt.ylim(-3, 3)
     plt.grid(True)
