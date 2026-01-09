@@ -21,7 +21,7 @@ message through an emitter or handle the position of Robot1.
 ## https://www.cyberbotics.com/doc/guide/thymio2?version=develop
 
 import math
-from controller import Robot
+from controller import Supervisor
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 import numpy as np
@@ -71,15 +71,20 @@ def get_rotated_rect_corners(center_pos, size, angle_rad):
 
     return final_corners
     
-robot = Robot()
+robot = Supervisor()
+robot_node = robot.getFromDef("Thymio")
 timestep = int(robot.getBasicTimeStep())
 delta_t = timestep / 1000.0
 keyboard = robot.getKeyboard()
 keyboard.enable(timestep)
 robot_speed = 0
 rotation_speed = 2
+
+# plot data
 list_pos_x = []
 list_pos_y = []
+list_real_x = []
+list_real_y = []
 
 print(chr(27) + "[2J") # ANSI code for clearing command line
 print("Initialization of thymio_variables controller")
@@ -97,9 +102,7 @@ for i in range(7):
     prox_sensors.append(sensor)
 
 #state variables for odometry
-x = 0.151758
-y = -0.154528
-theta = -1.81907
+x, y, theta = 0.151758, -0.154528, -2.615814835873021 
 e = 0.054
 r = 0.021
 
@@ -115,6 +118,10 @@ def wait_ms(duration_ms):
 plt.ion()    
 plot_counter = 0
 while (robot.step(timestep) != -1):
+  real_pos = robot_node.getPosition() # [x, y, z] dans Webots
+  list_real_x.append(real_pos[0])
+  list_real_y.append(real_pos[1])
+    
   list_pos_x.append(x)
   list_pos_y.append(y)
 
@@ -146,8 +153,8 @@ while (robot.step(timestep) != -1):
   #Set motors speed :
   left_speed = robot_speed
   right_speed = robot_speed
-  motor_left.setVelocity(left_speed)
-  motor_right.setVelocity(right_speed)
+  #motor_left.setVelocity(left_speed)
+  #motor_right.setVelocity(right_speed)
   
   if command == keyboard.UP:
     robot_speed += 0.2
@@ -185,7 +192,9 @@ while (robot.step(timestep) != -1):
 
     
     plt.plot(list_pos_x, list_pos_y, 'b-', linewidth=2, label='Trajectoire')
-    
+    plt.plot(list_real_x, list_real_y, 'g--', label='Réel')
+    plt.plot(real_pos[0], real_pos[1], 'go')
+    plt.plot(x, y, 'bo')
     plt.plot(x, y, 'bo', markersize=8)
 
     
