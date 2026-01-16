@@ -31,7 +31,88 @@ def get_rotated_rect_corners(center_pos, size, angle_rad):
     final_corners = rotated_corners + np.array([cx, cy])
     return final_corners
 
+def indxtMean(index,arrays):
+    indxSum = np.array([0.0, 0.0 ,0.0])
+    for i in range(np.size(index,0)):
+        indxSum = np.add(indxSum, np.array(arrays[index[i]]), out = indxSum ,casting = 'unsafe')
+    return indxSum/np.size(index,0)
 
+def ICPSVD(fixedX,fixedY,movingX,movingY):
+    #https://fr.wikipedia.org/wiki/Iterative_Closest_Point
+    #d'après wikipédia
+    reqR = np.identity(3) #matrice identité de rotation
+    reqT = [0.0, 0.0, 0.0] #matrice nulle de translation
+    fixedt = []
+    movingt = []
+
+    #nuage fixe
+    for i in range(len(fixedX)):
+        fixedt.append([fixedX[i], fixedY[i], 0])
+
+    #nuage calculé
+    for i in range(len(movingX)):
+        movingt.append([movingX[i], movingY[i], 0])
+
+    #1 - sélection des points dans les nuages de départ
+    moving = np.asarray(movingt)
+    fixed = np.asarray(fixedt)
+
+    #2- mise en correspondance (voisin proche)
+    n = np.size(moving,0)
+    TREE = KDTree(fixed)
+
+    #mise en correspondance
+    for i in range(10):
+        #3- pondération des paires de points
+        distance, index = TREE.query(moving)
+        #4 - rejet (absent ici, tous les points sont comptés)
+        #5 - critère de distance (erreur quadrttique)
+        err = np.mean(distance**2)
+
+        #centroides
+        com = np.mean(moving,0) #nuage calculé
+        cof = indxtMean(index,fixed) #nuage fixe
+
+        #6 - Minimisation du critère de distance
+        W = np.dot(np.transpose(moving),indxtfixed(index,fixed)) - n*np.outer(com,cof)
+        #valeur singulières SVD
+        #https://en.wikipedia.org/wiki/Kabsch_algorithm
+        # -> calculer la matrice de rotation optimale.
+        U , _ , V = np.linalg.svd(W, full_matrices = False)
+        tempR = np.dot(V.T,U.T) #rotation locale
+        tempT = cof - np.dot(tempR,com) #translation locale (centroide fixe - rotation * centroide calculé)
+        
+        #maj avec la transformée
+        moving = (tempR.dot(moving.T)).T #rotation
+        moving = np.add(moving,tempT) #translation
+        reqR=np.dot(tempR,reqR)
+        reqT = np.add(np.dot(tempR,reqT),tempT)
+    
+    return reqR, reqT, moving
+
+def indxtfixed(index,arrays):
+    T = []
+    for i in index:
+        T.append(arrays[i])
+    return np.asanyarray(T)
+
+def get_rotated_rect_corners(center_pos, size, angle_rad):
+    cx, cy = center_pos
+    w, h = size[0] / 2.0, size[1] / 2.0 # Demi-largeur et demi-hauteur
+
+    #calcul des coins des murs par rapport aux coordonnées et tailles
+    corners_local = np.array([[-w, -h], [w, -h], [w, h], [-w, h]])
+
+    #position
+    c, s = np.cos(angle_rad), np.sin(angle_rad)
+    rot_matrix = np.array([[c, -s], [s, c]])
+
+    #appliquer la matrice de rotation sur les coins
+    rotated_corners = corners_local.dot(rot_matrix.T)
+
+    #ajout du centre
+    final_corners = rotated_corners + np.array([cx, cy])
+    return final_corners
 
 walls_config = [
 

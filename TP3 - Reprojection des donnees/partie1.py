@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 import numpy as np
 
-# --- FONCTIONS ---
 def multmatr(X, Y, T):
     res = []
     res.append(X[0]*Y[0] + X[3]*Y[1] + X[6]*Y[2] + T[0])
@@ -22,7 +21,7 @@ def get_rotated_rect_corners(center_pos, size, angle_rad):
     final_corners = rotated_corners + np.array([cx, cy])
     return final_corners
 
-# --- MURS ---
+#murs
 walls_config = [
     {'pos': (-0.16, 0.23), 'size': (0.01, 1.0), 'angle': 0.0},
     {'pos': (0.05, 0.73), 'size': (0.43, 0.01), 'angle': 0.0},
@@ -49,27 +48,32 @@ walls_config = [
     {'pos': (0.67, 0.0), 'size': (0.01, 0.5), 'angle': 0.0}
 ]
 
-# --- INIT ---
+#initialisation
 robot = Supervisor()
 robot_node = robot.getFromDef("Thymio")
 
+#lidar
 lidar = robot.getDevice('lidar')
 lidar.enable(int(robot.getBasicTimeStep()))
 lidar.enablePointCloud()
 
+#constantes
 timestep = int(robot.getBasicTimeStep())
 robot_speed = 0
 rotation_speed = 2
+theta = -2.615814835873021
 
+#clavier
 keyboard = robot.getKeyboard()
 keyboard.enable(timestep)
 
+#moteur
 motor_left = robot.getDevice("motor.left")
 motor_right = robot.getDevice("motor.right")
 motor_left.setPosition(float('inf'))
 motor_right.setPosition(float('inf'))   
 
-theta = -2.615814835873021
+#données pour affichage
 list_time = []
 list_real_x, list_real_y, list_real_theta = [], [], []
 start_time = robot.getTime()
@@ -77,7 +81,6 @@ start_time = robot.getTime()
 plt.ion()    
 plot_counter = 0
 
-# --- BOUCLE ---
 while (robot.step(timestep) != -1):
 
     # Données réelles
@@ -90,12 +93,13 @@ while (robot.step(timestep) != -1):
     lidar_points_x = []
     lidar_points_y = []
 
+    #utile pour remettre l'orientation du lidar.
     fov = lidar.getFov()
     angle_lidar = fov / 2
     angle_increment = fov / lidar.getHorizontalResolution()
 
     for dist in point_cloud:
-            
+        #transformée uniquement dans un plan 2D.
         global_angle = real_theta + angle_lidar
         p_x = pos[0] + dist * math.cos(global_angle)
         p_y = pos[1] + dist * math.sin(global_angle)
@@ -112,14 +116,15 @@ while (robot.step(timestep) != -1):
     list_real_theta.append(real_theta)
     list_time.append(robot.getTime() - start_time)
 
-    # Commandes
-    command = keyboard.getKey()
+    #affichage dans le terminal
     print(chr(27) + "[2J")
     print(f"x : {pos[0]:.2f}m / y: {pos[1]:.2f}m")
     
     left_speed = robot_speed
     right_speed = robot_speed
-    
+
+    #écoute clavier
+    command = keyboard.getKey()
     if command == keyboard.UP:
         robot_speed += 0.2
         if robot_speed > 6: robot_speed = 6
@@ -140,7 +145,7 @@ while (robot.step(timestep) != -1):
     motor_left.setVelocity(left_speed)
     motor_right.setVelocity(right_speed)
     
-    # Plot
+    #affichae de la carte
     plot_counter += 1
     if plot_counter % 20 == 0:
         plt.figure(1)
