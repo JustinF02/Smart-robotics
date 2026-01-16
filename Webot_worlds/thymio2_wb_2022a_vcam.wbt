@@ -32,7 +32,7 @@ Wall {
   translation -0.16 0.23 0
   size 0.01 1 0.1
   appearance Roughcast {
-    colorOverride 0 1 0
+    colorOverride 1 1 1
     textureTransform TextureTransform {
       scale 2.4 1
     }
@@ -43,7 +43,7 @@ Wall {
   name "wall(12)"
   size 0.43 0.01 0.1
   appearance Roughcast {
-    colorOverride 0 1 0
+    colorOverride 1 1 1
     textureTransform TextureTransform {
       scale 2.4 1
     }
@@ -119,7 +119,7 @@ Wall {
   name "wall(8)"
   size 0.49 0.01 0.1
   appearance Roughcast {
-    colorOverride 0 1 0
+    colorOverride 1 1 1
     textureTransform TextureTransform {
       scale 2.4 1
     }
@@ -135,7 +135,7 @@ Wall {
   name "wall(15)"
   size 0.43 0.01 0.1
   appearance Roughcast {
-    colorOverride 0 1 0
+    colorOverride 1 1 1
     textureTransform TextureTransform {
       scale 2.4 1
     }
@@ -146,7 +146,7 @@ Wall {
   name "wall(18)"
   size 0.9 0.01 0.1
   appearance Roughcast {
-    colorOverride 0 1 0
+    colorOverride 1 1 1
     textureTransform TextureTransform {
       scale 2.4 1
     }
@@ -157,7 +157,7 @@ Wall {
   name "wall(14)"
   size 0.4 0.01 0.1
   appearance Roughcast {
-    colorOverride 0 1 0
+    colorOverride 1 1 1
     textureTransform TextureTransform {
       scale 2.4 1
     }
@@ -173,7 +173,7 @@ Wall {
   name "wall(16)"
   size 0.01 0.5 0.1
   appearance Roughcast {
-    colorOverride 0 1 0
+    colorOverride 1 1 1
     textureTransform TextureTransform {
       scale 2.4 1
     }
@@ -184,7 +184,7 @@ Wall {
   name "wall(19)"
   size 0.01 0.5 0.1
   appearance Roughcast {
-    colorOverride 0 1 0
+    colorOverride 1 1 1
     textureTransform TextureTransform {
       scale 2.4 1
     }
@@ -195,7 +195,7 @@ Wall {
   name "wall(13)"
   size 0.01 0.48 0.1
   appearance Roughcast {
-    colorOverride 0 1 0
+    colorOverride 1 1 1
     textureTransform TextureTransform {
       scale 2.4 1
     }
@@ -206,7 +206,7 @@ Wall {
   name "wall(6)"
   size 0.01 0.5 0.1
   appearance Roughcast {
-    colorOverride 0 1 0
+    colorOverride 1 1 1
     textureTransform TextureTransform {
       scale 2.4 1
     }
