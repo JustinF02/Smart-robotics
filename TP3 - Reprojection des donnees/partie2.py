@@ -5,6 +5,7 @@ matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 import numpy as np
+from scipy.spatial import KDTree
 
 def get_walls_point_cloud(walls_config, step=0.01): #step de 1cm.
     fixed_x = []
@@ -236,7 +237,6 @@ while (robot.step(timestep) != -1):
     angle_lidar = fov/2
     angle_increment = fov / lidar.getHorizontalResolution()
 
-
     for i in point_cloud:
 
         if not math.isinf(i):
@@ -336,6 +336,11 @@ while (robot.step(timestep) != -1):
         #     corners = get_rotated_rect_corners(wall['pos'], wall['size'], wall['angle'])
         #     ax.add_patch(Polygon(corners, closed=True, facecolor='red', alpha=0.5))
 
+        reqR, reqT, moving_corrected = ICPSVD(wall_points_x, wall_points_y, lidar_points_x, lidar_points_y)
+        icp_x = moving_corrected[:,0]
+        icp_y = moving_corrected[:,1]
+        plt.plot(icp_x, icp_y, 'm.', markersize=2, label='Lidar corrigé ICP')
+        
         plt.plot(wall_points_x, wall_points_y, 'k.', markersize=1, label='Murs (Fixed Cloud)')
         plt.plot(lidar_points_x, lidar_points_y, 'b.', markersize=2, label='Lidar')
         plt.plot(list_real_x, list_real_y, 'g--', label='Réel') # Trajectoire réelle
