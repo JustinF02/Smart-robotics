@@ -1,17 +1,43 @@
 import math
 from controller import Supervisor
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 import numpy as np
 
-def multmatr(X, Y, T):
-    res = []
-    res.append(X[0]*Y[0] + X[3]*Y[1] + X[6]*Y[2] + T[0])
-    res.append(X[1]*Y[0] + X[4]*Y[1] + X[7]*Y[2] + T[1])
-    res.append(X[2]*Y[0] + X[5]*Y[1] + X[8]*Y[2] + T[2])
-    return res
+def get_walls_point_cloud(walls_config, step=0.01): #step de 1cm.
+    fixed_x = []
+    fixed_y = []
 
+    for wall in walls_config:
+        cx, cy = wall['pos']
+        w, h = wall['size']
+        angle = wall['angle']
 
+        #si largeur > hauteur -> itération sur x sinon y
+        if w > h:
+            # Création d'un tableau de points de -w/2 à w/2
+            lengths = np.arange(-w/2, w/2, step)
+            local_x = lengths
+            local_y = np.zeros_like(lengths) #y est au milieu
+        else:
+            lengths = np.arange(-h/2, h/2, step)
+            local_x = np.zeros_like(lengths) #x est àau milieu
+            local_y = lengths
+
+        #rotation des points
+        c, s = np.cos(angle), np.sin(angle)
+        
+        #rotation 2D
+        rot_x = local_x * c - local_y * s
+        rot_y = local_x * s + local_y * c
+
+        #translation et stockage
+        fixed_x.extend(rot_x + cx)
+        fixed_y.extend(rot_y + cy)
+
+    return fixed_x, fixed_y
 
 def get_rotated_rect_corners(center_pos, size, angle_rad):
     cx, cy = center_pos
@@ -31,12 +57,14 @@ def get_rotated_rect_corners(center_pos, size, angle_rad):
     final_corners = rotated_corners + np.array([cx, cy])
     return final_corners
 
+#centre de masse d'un groupe de points
 def indxtMean(index,arrays):
     indxSum = np.array([0.0, 0.0 ,0.0])
     for i in range(np.size(index,0)):
         indxSum = np.add(indxSum, np.array(arrays[index[i]]), out = indxSum ,casting = 'unsafe')
     return indxSum/np.size(index,0)
 
+#iterative closest point avec singular value decomposition
 def ICPSVD(fixedX,fixedY,movingX,movingY):
     #https://fr.wikipedia.org/wiki/Iterative_Closest_Point
     #d'après wikipédia
@@ -90,6 +118,7 @@ def ICPSVD(fixedX,fixedY,movingX,movingY):
     
     return reqR, reqT, moving
 
+#tri des points dans un tableau.
 def indxtfixed(index,arrays):
     T = []
     for i in index:
@@ -141,10 +170,10 @@ walls_config = [
     {'pos': (0.67, 0.0), 'size': (0.01, 0.5), 'angle': 0.0}
 ]
 
-
+wall_points_x, wall_points_y = get_walls_point_cloud(walls_config, step=0.01)
 
 robot = Supervisor()
-robot_node = robot.getFromDef("Thymio")
+robot_node = robot.getSelf()
 
 
 # LIDAR
@@ -302,11 +331,12 @@ while (robot.step(timestep) != -1):
         ax = plt.gca()
 
         # Dessin des murs
-        for wall in walls_config:
+        # for wall in walls_config:
 
-            corners = get_rotated_rect_corners(wall['pos'], wall['size'], wall['angle'])
-            ax.add_patch(Polygon(corners, closed=True, facecolor='red', alpha=0.5))
+        #     corners = get_rotated_rect_corners(wall['pos'], wall['size'], wall['angle'])
+        #     ax.add_patch(Polygon(corners, closed=True, facecolor='red', alpha=0.5))
 
+        plt.plot(wall_points_x, wall_points_y, 'k.', markersize=1, label='Murs (Fixed Cloud)')
         plt.plot(lidar_points_x, lidar_points_y, 'b.', markersize=2, label='Lidar')
         plt.plot(list_real_x, list_real_y, 'g--', label='Réel') # Trajectoire réelle
         plt.plot(list_pos_x, list_pos_y, 'b-', label='Estimé') # Trajectoire mesurée
