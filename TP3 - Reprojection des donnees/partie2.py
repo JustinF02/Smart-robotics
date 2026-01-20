@@ -222,6 +222,15 @@ motor_right.setPosition(float('inf'))
 plt.ion()    
 plot_counter = 0
 
+#variables ICP
+last_icp_compute_time = 0.0
+icp_interval = 5.0
+
+reqR_stored = np.identity(3)
+reqT_stored = [0.0, 0.0, 0.0]
+icp_x = []
+icp_y = []
+
 while (robot.step(timestep) != -1):
     #recuperation données
     real_pos = robot_node.getPosition()
@@ -321,6 +330,43 @@ while (robot.step(timestep) != -1):
     motor_left.setVelocity(left_speed)
     motor_right.setVelocity(right_speed)
 
+
+
+    current_sim_time = robot.getTime() - start_time
+
+    #attente de 5 secondes.
+    if current_sim_time - last_icp_compute_time >= icp_interval:
+        
+        print(f"\n--- Recalage ICP (t={current_sim_time:.2f}s) ---")
+        
+        #calcul ICP
+        reqR, reqT, moving_corrected = ICPSVD(wall_points_x, wall_points_y, lidar_points_x, lidar_points_y)
+        
+        #nuage corrigé
+        icp_x = moving_corrected[:, 0]
+        icp_y = moving_corrected[:, 1]
+        
+        #correction
+        old_x, old_y = x, y
+        
+        #position au format vecteur
+        robot_pos_vector = np.array([x, y, 0.0])
+        
+        #reqR matrice de rotation
+        #reqT vecteur de translation
+        corrected_robot_pos = np.dot(reqR, robot_pos_vector) + np.array(reqT)
+        
+        #coordonnées corrigées
+        x = corrected_robot_pos[0]
+        y = corrected_robot_pos[1]
+        
+        #mis à jour de theta.
+        delta_theta_icp = math.atan2(reqR[1, 0], reqR[0, 0])
+        theta += delta_theta_icp
+        theta = math.atan2(math.sin(theta), math.cos(theta))
+        
+        last_icp_compute_time = current_sim_time
+
     #affichage plot toutes les 20 itérations
     plot_counter += 1
     if plot_counter % 20 == 0:
@@ -336,13 +382,15 @@ while (robot.step(timestep) != -1):
         #     corners = get_rotated_rect_corners(wall['pos'], wall['size'], wall['angle'])
         #     ax.add_patch(Polygon(corners, closed=True, facecolor='red', alpha=0.5))
 
-        reqR, reqT, moving_corrected = ICPSVD(wall_points_x, wall_points_y, lidar_points_x, lidar_points_y)
-        icp_x = moving_corrected[:,0]
-        icp_y = moving_corrected[:,1]
-        plt.plot(icp_x, icp_y, 'm.', markersize=2, label='Lidar corrigé ICP')
-        
         plt.plot(wall_points_x, wall_points_y, 'k.', markersize=1, label='Murs (Fixed Cloud)')
         plt.plot(lidar_points_x, lidar_points_y, 'b.', markersize=2, label='Lidar')
+        if len(icp_x) > 0:
+            # On affiche les points tels qu'ils étaient au moment du calcul ICP (en Magenta)
+            plt.plot(icp_x, icp_y, 'm+', markersize=2, label='Recalage (update 5s)')
+            
+            # On affiche une croix Magenta là où l'ICP pense que le robot est vraiment
+            plt.plot(x - reqT_stored[0], y - reqT_stored[1], 'mx', markersize=10, markeredgewidth=2, label='Pos. Corrigée')
+
         plt.plot(list_real_x, list_real_y, 'g--', label='Réel') # Trajectoire réelle
         plt.plot(list_pos_x, list_pos_y, 'b-', label='Estimé') # Trajectoire mesurée
         plt.plot(real_pos[0], real_pos[1], 'go') # Position réelle actuelle
