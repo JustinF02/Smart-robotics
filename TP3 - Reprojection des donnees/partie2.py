@@ -368,28 +368,26 @@ while (robot.step(timestep) != -1):
 
     current_sim_time = robot.getTime() - start_time
 
-    # =================================================================
-    # CAS 1 : CORRECTION DE L'ESTIMATION ODOMÉTRIQUE (LENT - 5s)
-    # =================================================================
+    #corrections ICP toutes les 5 secondes
     if current_sim_time - last_icp_slow_time >= icp_interval_slow:
         print(f"\n--- Recalage Odométrie (t={current_sim_time:.2f}s) ---")
         
-        # 'lidar_points_x' contient déjà les points projetés depuis la position actuelle estimée
+        #calcul ICP
         reqR, reqT, moving_corrected = ICPSVD(wall_points_x, wall_points_y, lidar_points_x, lidar_points_y)
         
-        # Correction de x, y
+        #correction de x, y
         robot_pos_vector = np.array([x, y, 0.0])
         corrected_robot_pos = np.dot(reqR, robot_pos_vector) + np.array(reqT)
         
         x = corrected_robot_pos[0]
         y = corrected_robot_pos[1]
         
-        # Correction de theta
+        #correction de theta
         delta_theta_icp = math.atan2(reqR[1, 0], reqR[0, 0])
         theta += delta_theta_icp
         theta = math.atan2(math.sin(theta), math.cos(theta)) 
         
-        # Pour l'affichage
+        #pour l'affichage
         icp_x = moving_corrected[:, 0]
         icp_y = moving_corrected[:, 1]
         reqT_stored = reqT
@@ -397,19 +395,14 @@ while (robot.step(timestep) != -1):
         last_icp_slow_time = current_sim_time
 
 
-    # =================================================================
-    # CAS 2 : CALCUL "LIDAR SEUL" (RAPIDE - 0.5s)
-    # =================================================================
+    #correction ICP rapide sans odométrie
     if current_sim_time - last_icp_fast_time >= icp_interval_fast:
         
-        # On ne print pas tout le temps pour ne pas spammer la console
-        # print(f"Scan Match Lidar Only")
-
         lidar_only_global_x = []
         lidar_only_global_y = []
         angle_lidar_temp = fov/2
 
-        # 1. On projette les points lasers depuis la DERNIÈRE position connue (only_x, only_y)
+        #projection laser sur la position estimée
         for dist in point_cloud:
             if not math.isinf(dist):
                 g_angle = only_theta + angle_lidar_temp 
@@ -419,10 +412,10 @@ while (robot.step(timestep) != -1):
                 lidar_only_global_y.append(p_y)
             angle_lidar_temp -= angle_increment 
 
-        # 2. Calcul ICP
+        #calcul ICP
         reqR_only, reqT_only, _ = ICPSVD(wall_points_x, wall_points_y, lidar_only_global_x, lidar_only_global_y)
         
-        # 3. Application du mouvement trouvé
+        #application du mouvement trouvé
         pos_vec_only = np.array([only_x, only_y, 0.0])
         corr_pos_only = np.dot(reqR_only, pos_vec_only) + np.array(reqT_only)
         
@@ -439,7 +432,7 @@ while (robot.step(timestep) != -1):
     plot_counter += 1
     if plot_counter % 20 == 0:
 
-        # --- FIGURE 1 : Carte du labyrinthe (Trajectoire XY) ---
+        # FIGURE 1 carte du labyrtinthe
         plt.figure(1)
         plt.clf()
         ax = plt.gca()
@@ -470,24 +463,24 @@ while (robot.step(timestep) != -1):
         plt.legend()
         plt.title("Trajectoire dans l'environnement")
 
-        # --- FIGURE 2 : Évolution temporelle (Subplots) ---
+        # FIGURE 2 évolution de l'erreur
         plt.figure(2)
         plt.clf()
 
-        # Subplot X
+        #subplot X
         plt.subplot(3, 1, 1)
         plt.plot(list_time, list_real_x, 'g', label='Réel')
         plt.plot(list_time, list_pos_x, 'b--', label='Estimé')
         plt.ylabel('X (m)')
         plt.legend()
 
-        # Subplot Y (ou Z selon votre modèle)
+        #subplot Y (ou Z selon votre modèle)
         plt.subplot(3, 1, 2)
         plt.plot(list_time, list_real_y, 'g')
         plt.plot(list_time, list_pos_y, 'b--')
         plt.ylabel('Y (m)')
 
-        # Subplot Theta
+        #subplot Theta
         plt.subplot(3, 1, 3)
         plt.plot(list_time, list_real_theta, 'g')
         plt.plot(list_time, list_pos_theta, 'b--')
@@ -497,17 +490,17 @@ while (robot.step(timestep) != -1):
         plt.pause(0.01)
         plt.draw()
 
-        # --- FIGURE 3 : Comparaison des erreurs en fonction du temps ---
+        # FIGURE 3 comparaison des trois méthodes d'estimation de position
         plt.figure(3)
         plt.clf()
         plt.title("Évolution de l'erreur de position en fonction du temps")
         
-        # Courbe rouge : Sans recalage (l'erreur doit monter)
+        #ligne rouge : odométrie seule
         plt.plot(list_time, error_without_icp, 'r--', label='Sans Recalage (Odométrie)')
         
-        # Courbe bleue : Avec recalage (l'erreur doit rester basse)
+        #ligne bleue : odométrie + ICP
         plt.plot(list_time, error_with_icp, 'b-', label='Avec Recalage (ICP)')
-        # Courbe verte : LIDAR seulement
+        #ligne verte : ICP seul
         plt.plot(list_time, error_only_lidar, 'g-.', label='Lidar seul (ICP sans odométrie)')
         
         plt.xlabel('Temps (s)')
