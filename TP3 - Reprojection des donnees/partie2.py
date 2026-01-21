@@ -231,6 +231,17 @@ reqT_stored = [0.0, 0.0, 0.0]
 icp_x = []
 icp_y = []
 
+#variables odométrie pure sans correction
+odo_x = x
+odo_y = y
+odo_theta = theta
+list_odo_x = []
+list_odo_y = []
+
+#stocker les erreurs
+error_with_icp = []
+error_without_icp = []
+
 while (robot.step(timestep) != -1):
     #recuperation données
     real_pos = robot_node.getPosition()
@@ -289,6 +300,19 @@ while (robot.step(timestep) != -1):
     x = x + delta_s * math.cos(theta + delta_theta / 2.0)
     y = y + delta_s * math.sin(theta + delta_theta / 2.0)
     theta = theta - delta_theta
+
+    odo_x = odo_x + delta_s * math.cos(odo_theta + delta_theta / 2.0)
+    odo_y = odo_y + delta_s * math.sin(odo_theta + delta_theta / 2.0)
+    odo_theta = odo_theta - delta_theta
+    odo_theta = math.atan2(math.sin(odo_theta), math.cos(odo_theta))
+
+    #calcul erreur avec ICP
+    dist_err_icp = math.sqrt((x - real_pos[0])**2 + (y - real_pos[1])**2)
+    error_with_icp.append(dist_err_icp)
+
+    #calcul error sans ICP
+    dist_err_odo = math.sqrt((odo_x - real_pos[0])**2 + (odo_y - real_pos[1])**2)
+    error_without_icp.append(dist_err_odo)
 
     #affichage état robot
     print(chr(27) + "[2J")
@@ -428,3 +452,23 @@ while (robot.step(timestep) != -1):
 
         plt.pause(0.01)
         plt.draw()
+
+        # --- FIGURE 3 : Comparaison des erreurs en fonction du temps ---
+        plt.figure(3)
+        plt.clf()
+        plt.title("Évolution de l'erreur de position en fonction du temps")
+        
+        # Courbe rouge : Sans recalage (l'erreur doit monter)
+        plt.plot(list_time, error_without_icp, 'r--', label='Sans Recalage (Odométrie)')
+        
+        # Courbe bleue : Avec recalage (l'erreur doit rester basse)
+        plt.plot(list_time, error_with_icp, 'b-', label='Avec Recalage (ICP)')
+        
+        plt.xlabel('Temps (s)')
+        plt.ylabel('Erreur de position (m)')
+        plt.legend()
+        plt.grid(True)
+        
+        plt.pause(0.01)
+        plt.draw()
+        
