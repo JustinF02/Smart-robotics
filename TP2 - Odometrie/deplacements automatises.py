@@ -109,7 +109,7 @@ V_ROT = 1.5            # Vitesse de rotation
 DIST_THRESHOLD = 0.01  # Seuil d'arrêt en distance (1 cm)
 ANGLE_THRESHOLD = 0.05 # Seuil d'alignement (~3 degrés)
 
-#init plot
+
 plt.ion()    
 plot_counter = 0
 
@@ -163,6 +163,7 @@ while (robot.step(timestep) != -1):
     #vider la console
     print(chr(27) + "[2J")
 
+    #asservissement du robot
     if current_target_index < len(targets):
         target_x, target_y = targets[current_target_index]
         
@@ -172,28 +173,28 @@ while (robot.step(timestep) != -1):
         alpha = math.atan2(dy, dx) #angle cible
         angle_error = alpha - theta #angle à corriger
 
-        # Normalisation de l'angle
+        #normalisation de theta
         while angle_error > math.pi: angle_error -= 2 * math.pi
         while angle_error < -math.pi: angle_error += 2 * math.pi
 
-        # --- Logique d'état : Rotation puis Translation ---
+        #rotation puis translation vzrs la cible
         if distance > DIST_THRESHOLD:
             if abs(angle_error) > ANGLE_THRESHOLD:
-                # Étape 1 : S'orienter
+                #tourn,er
                 if angle_error > 0:
                     left_speed, right_speed = -V_ROT, V_ROT
                 else:
                     left_speed, right_speed = V_ROT, -V_ROT
             else:
-                # Étape 2 : Avancer
+                #puis avancer
                 left_speed, right_speed = V_TRANS, V_TRANS
         else:
-            # Étape 3 : Point atteint, passer au suivant
+            #prochaine cible
             print(f"Point {current_target_index + 1} atteint !")
             current_target_index += 1
             left_speed, right_speed = 0, 0
     else:
-        # Fin de la trajectoire
+        #retour point de départ
         left_speed, right_speed = 0, 0
         if plot_counter % 100 == 0:
             print("TRAJECTOIRE TERMINÉE")
@@ -202,7 +203,7 @@ while (robot.step(timestep) != -1):
     print(f"x : {x}cm / y: {y}cm")
     print(f"left motor speed :{v_l}")
     print(f"right motor speed :{v_r}")
-    #print(command)
+    #print(f"keyboard key pressed :{command}")
     print(f"forward command speed: {robot_speed}")
     print(f"Translation à faire : {distance:.3f} m")
     print(f"Rotation à faire : {math.degrees(angle_error):.2f} degrés")
@@ -214,23 +215,24 @@ while (robot.step(timestep) != -1):
     plot_counter += 1
     if plot_counter % 20 == 0:
 
+        #EVOLUTION COORDONNéES
         plt.figure(1)
         plt.clf()
 
-        # Subplot X
+        #subplot X
         plt.subplot(3, 1, 1)
         plt.plot(list_time, list_real_x, 'g', label='Réel')
         plt.plot(list_time, list_pos_x, 'b--', label='Estimé')
         plt.ylabel('X (m)')
         plt.legend()
 
-        # Subplot Y
+        #subplot Y
         plt.subplot(3, 1, 2)
         plt.plot(list_time, list_real_y, 'g')
         plt.plot(list_time, list_pos_y, 'b--')
         plt.ylabel('Y (m)')
 
-        # Subplot Theta
+        #subplot Theta
         plt.subplot(3, 1, 3)
         plt.plot(list_time, list_real_theta, 'g')
         plt.plot(list_time, list_pos_theta, 'b--')
@@ -240,12 +242,12 @@ while (robot.step(timestep) != -1):
         plt.pause(0.01)
         plt.draw()
 
-        # --- FIGURE 1 : Carte du labyrinthe (Trajectoire XY) ---
+        # CARTE
         plt.figure(2)
         plt.clf()
         ax = plt.gca()
         
-        # Dessin des murs
+        #dessiner les murs
         for wall in walls_config:
             corners = get_rotated_rect_corners(wall['pos'], wall['size'], wall['angle'])
             ax.add_patch(Polygon(corners, closed=True, facecolor='red', alpha=0.5))
@@ -261,15 +263,12 @@ while (robot.step(timestep) != -1):
         plt.legend()
         plt.title("Trajectoire dans l'environnement")
 
-        # Affichage du point de destination (cible) en rouge
+        #waypoints
         all_targets_x = [t[0] for t in targets]
         all_targets_y = [t[1] for t in targets]
         plt.plot(all_targets_x, all_targets_y, 'rx', markersize=8, label='Waypoints')
         
-        # Surligner la cible actuelle
+        #waypoint actuel
         if current_target_index < len(targets):
             plt.plot(targets[current_target_index][0], targets[current_target_index][1], 'ro', markersize=10, fillstyle='none')
         plt.legend()
-
-        # --- FIGURE 2 : Évolution temporelle (Subplots) ---
-        
