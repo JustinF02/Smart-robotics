@@ -7,39 +7,6 @@ from matplotlib.patches import Polygon
 import numpy as np
 from scipy.spatial import KDTree
 
-def get_walls_point_cloud(walls_config, step=0.01): #step de 1cm.
-    fixed_x = []
-    fixed_y = []
-
-    for wall in walls_config:
-        cx, cy = wall['pos']
-        w, h = wall['size']
-        angle = wall['angle']
-
-        #si largeur > hauteur -> itération sur x sinon y
-        if w > h:
-            # Création d'un tableau de points de -w/2 à w/2
-            lengths = np.arange(-w/2, w/2, step)
-            local_x = lengths
-            local_y = np.zeros_like(lengths) #y est au milieu
-        else:
-            lengths = np.arange(-h/2, h/2, step)
-            local_x = np.zeros_like(lengths) #x est àau milieu
-            local_y = lengths
-
-        #rotation des points
-        c, s = np.cos(angle), np.sin(angle)
-        
-        #rotation 2D
-        rot_x = local_x * c - local_y * s
-        rot_y = local_x * s + local_y * c
-
-        #translation et stockage
-        fixed_x.extend(rot_x + cx)
-        fixed_y.extend(rot_y + cy)
-
-    return fixed_x, fixed_y
-
 def get_rotated_rect_corners(center_pos, size, angle_rad):
     cx, cy = center_pos
     w, h = size[0] / 2.0, size[1] / 2.0 # Demi-largeur et demi-hauteur
@@ -64,60 +31,6 @@ def indxtMean(index,arrays):
     for i in range(np.size(index,0)):
         indxSum = np.add(indxSum, np.array(arrays[index[i]]), out = indxSum ,casting = 'unsafe')
     return indxSum/np.size(index,0)
-
-#iterative closest point avec singular value decomposition
-def ICPSVD(fixedX,fixedY,movingX,movingY):
-    #https://fr.wikipedia.org/wiki/Iterative_Closest_Point
-    #d'après wikipédia
-    reqR = np.identity(3) #matrice identité de rotation
-    reqT = [0.0, 0.0, 0.0] #matrice nulle de translation
-    fixedt = []
-    movingt = []
-
-    #nuage fixe
-    for i in range(len(fixedX)):
-        fixedt.append([fixedX[i], fixedY[i], 0])
-
-    #nuage calculé
-    for i in range(len(movingX)):
-        movingt.append([movingX[i], movingY[i], 0])
-
-    #1 - sélection des points dans les nuages de départ
-    moving = np.asarray(movingt)
-    fixed = np.asarray(fixedt)
-
-    #2- mise en correspondance (voisin proche)
-    n = np.size(moving,0)
-    TREE = KDTree(fixed)
-
-    #mise en correspondance
-    for i in range(10):
-        #3- pondération des paires de points
-        distance, index = TREE.query(moving)
-        #4 - rejet (absent ici, tous les points sont comptés)
-        #5 - critère de distance (erreur quadrttique)
-        err = np.mean(distance**2)
-
-        #centroides
-        com = np.mean(moving,0) #nuage calculé
-        cof = indxtMean(index,fixed) #nuage fixe
-
-        #6 - Minimisation du critère de distance
-        W = np.dot(np.transpose(moving),indxtfixed(index,fixed)) - n*np.outer(com,cof)
-        #valeur singulières SVD
-        #https://en.wikipedia.org/wiki/Kabsch_algorithm
-        # -> calculer la matrice de rotation optimale.
-        U , _ , V = np.linalg.svd(W, full_matrices = False)
-        tempR = np.dot(V.T,U.T) #rotation locale
-        tempT = cof - np.dot(tempR,com) #translation locale (centroide fixe - rotation * centroide calculé)
-        
-        #maj avec la transformée
-        moving = (tempR.dot(moving.T)).T #rotation
-        moving = np.add(moving,tempT) #translation
-        reqR=np.dot(tempR,reqR)
-        reqT = np.add(np.dot(tempR,reqT),tempT)
-    
-    return reqR, reqT, moving
 
 #tri des points dans un tableau.
 def indxtfixed(index,arrays):
@@ -171,8 +84,6 @@ walls_config = [
     {'pos': (0.67, 0.0), 'size': (0.01, 0.5), 'angle': 0.0}
 ]
 
-wall_points_x, wall_points_y = get_walls_point_cloud(walls_config, step=0.01)
-
 robot = Supervisor()
 robot_node = robot.getSelf()
 
@@ -207,7 +118,6 @@ list_pos_theta = []
 start_time = robot.getTime()
 
 #historiques pour les graphiques
-list_pos_x, list_pos_y, list_pos_theta = [], [], []
 list_real_x, list_real_y, list_real_theta = [], [], []
 list_time = []
 start_time = robot.getTime()
@@ -223,25 +133,6 @@ plt.ion()
 plt.show(block=False)    
 plot_counter = 0
 
-#variables ICP
-last_icp_slow_time = 0.0
-icp_interval_slow = 5.0
-
-reqR_stored = np.identity(3)
-reqT_stored = [0.0, 0.0, 0.0]
-icp_x = []
-icp_y = []
-
-#variables odométrie pure sans correction
-odo_x = x
-odo_y = y
-odo_theta = theta
-list_odo_x = []
-list_odo_y = []
-
-only_x = x
-only_y = y
-only_theta = theta
 
 #stocker les erreurs
 error_with_icp = []
@@ -268,9 +159,9 @@ while (robot.step(timestep) != -1):
 
             # filtrage TP navigation
             if abs(angle_lidar) <= math.pi / 2:
-                global_angle = theta + angle_lidar
-                p_x = x + i * math.cos(global_angle)
-                p_y = y + i * math.sin(global_angle)
+                global_angle = real_theta + angle_lidar
+                p_x = real_pos[0] + i * math.cos(global_angle)
+                p_y = real_pos[1] + i * math.sin(global_angle)
                 
                 lidar_points_x.append(p_x)
                 lidar_points_y.append(p_y)
@@ -282,43 +173,12 @@ while (robot.step(timestep) != -1):
     list_real_y.append(real_pos[1])
     list_real_theta.append(real_theta)
 
-    #estimated values
-    list_pos_x.append(x)
-    list_pos_y.append(y)
-    list_pos_theta.append(theta)
-    list_time.append(robot.getTime() - start_time)
-
     command = keyboard.getKey()
-
-    #Odométrie
-    #calcul vitesse roues
-    v_l = motor_left.getVelocity()
-    v_r = motor_right.getVelocity()
-
-    #delta de distance de roues
-    delta_l = v_l * r * delta_t
-    delta_r = v_r * r * delta_t
-
-    #modèle holonome
-    delta_s = (delta_r + delta_l) / 2.0
-    delta_theta = (delta_l - delta_r) / (2.0 * e)
-
-    #estimation de la position avec les delta
-    x = x + delta_s * math.cos(theta + delta_theta / 2.0)
-    y = y + delta_s * math.sin(theta + delta_theta / 2.0)
-    theta = theta - delta_theta
-
-    odo_x = odo_x + delta_s * math.cos(odo_theta + delta_theta / 2.0)
-    odo_y = odo_y + delta_s * math.sin(odo_theta + delta_theta / 2.0)
-    odo_theta = odo_theta - delta_theta
-    odo_theta = math.atan2(math.sin(odo_theta), math.cos(odo_theta))
 
 
     #affichage état robot
     print(chr(27) + "[2J")
-    print(f"x : {x}cm / y: {y}cm")
-    print(f"left motor speed :{v_l}")
-    print(f"right motor speed :{v_r}")
+    print(f"x : {real_pos[0]}cm / y: {real_pos[1]}cm")
     #print(command)
     print(f"forward command speed: {robot_speed}")
 
@@ -353,35 +213,7 @@ while (robot.step(timestep) != -1):
     motor_left.setVelocity(left_speed)
     motor_right.setVelocity(right_speed)
 
-
-
     current_sim_time = robot.getTime() - start_time
-
-    #corrections ICP toutes les 5 secondes
-    if current_sim_time - last_icp_slow_time >= icp_interval_slow:
-        print(f"\n--- Recalage Odométrie (t={current_sim_time:.2f}s) ---")
-        
-        #calcul ICP
-        reqR, reqT, moving_corrected = ICPSVD(wall_points_x, wall_points_y, lidar_points_x, lidar_points_y)
-        
-        #correction de x, y
-        robot_pos_vector = np.array([x, y, 0.0])
-        corrected_robot_pos = np.dot(reqR, robot_pos_vector) + np.array(reqT)
-        
-        x = corrected_robot_pos[0]
-        y = corrected_robot_pos[1]
-        
-        #correction de theta
-        delta_theta_icp = math.atan2(reqR[1, 0], reqR[0, 0])
-        theta += delta_theta_icp
-        theta = math.atan2(math.sin(theta), math.cos(theta)) 
-        
-        #pour l'affichage
-        icp_x = moving_corrected[:, 0]
-        icp_y = moving_corrected[:, 1]
-        reqT_stored = reqT
-
-        last_icp_slow_time = current_sim_time
 
     #affichage plot toutes les 20 itérations
     plot_counter += 1
@@ -393,24 +225,15 @@ while (robot.step(timestep) != -1):
         ax = plt.gca()
 
         # Dessin des murs
-        # for wall in walls_config:
+        for wall in walls_config:
 
-        #     corners = get_rotated_rect_corners(wall['pos'], wall['size'], wall['angle'])
-        #     ax.add_patch(Polygon(corners, closed=True, facecolor='red', alpha=0.5))
+            corners = get_rotated_rect_corners(wall['pos'], wall['size'], wall['angle'])
+            ax.add_patch(Polygon(corners, closed=True, facecolor='red', alpha=0.5))
 
-        plt.plot(wall_points_x, wall_points_y, 'k.', markersize=1, label='Murs (Fixed Cloud)')
         plt.plot(lidar_points_x, lidar_points_y, 'b.', markersize=2, label='Lidar')
-        if len(icp_x) > 0:
-            #Affichage des points tels qu'ils étaient au moment du calcul ICP
-            plt.plot(icp_x, icp_y, 'm+', markersize=2, label='Recalage (update 5s)')
-            
-            #Affichage d'une croix Magenta là où l'ICP pense que le robot est vraiment
-            plt.plot(x - reqT_stored[0], y - reqT_stored[1], 'mx', markersize=10, markeredgewidth=2, label='Pos. Corrigée')
 
         plt.plot(list_real_x, list_real_y, 'g--', label='Réel') # Trajectoire réelle
-        plt.plot(list_pos_x, list_pos_y, 'b-', label='Estimé') # Trajectoire mesurée
         plt.plot(real_pos[0], real_pos[1], 'go') # Position réelle actuelle
-        plt.plot(x, y, 'bo', markersize=8)       # Position estimée actuelle
 
         plt.axis('equal')
         plt.xlim(-1.0, 1.0)
