@@ -308,6 +308,8 @@ while (robot.step(timestep) != -1):
 
         # Points Lidar
         plt.plot(lidar_points_x, lidar_points_y, 'b.', markersize=2, label='Lidar')
+        plt.plot(lidar_points_x, lidar_points_y, 'b.', markersize=2, label='Lidar')
+        
         if 'debug_bubble_indices' in locals():
             bx_list, by_list = [], []
             for idx in debug_bubble_indices:
