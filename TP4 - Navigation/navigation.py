@@ -44,8 +44,9 @@ def find_best_point(start_i, end_i, ranges):
     Return index of best point in ranges
     Naive: Choose the furthest point within ranges and go there
     """
-    best_point = np.argmax(ranges[start_i:end_i]) + start_i
-    return best_point
+    return int((start_i + end_i) / 2)
+    # best_point = np.argmax(ranges[start_i:end_i]) + start_i
+    # return best_point
 
 def get_rotated_rect_corners(center_pos, size, angle_rad):
     cx, cy = center_pos
@@ -98,10 +99,10 @@ def get_rotated_rect_corners(center_pos, size, angle_rad):
     return final_corners
 
 #constantes
-ROBOT_RADIUS = 0.9
-SAFETY_MARGIN = 0.4
+ROBOT_RADIUS = 0.15
+SAFETY_MARGIN = 0.15
 BUBBLE_RADIUS = ROBOT_RADIUS + SAFETY_MARGIN
-MAX_LIDAR_DIST = 1 #depuis webot
+MAX_LIDAR_DIST = 3.0 #valeur tirée depuis webot
 VELOCITY_BASE = 4.0
 KP_TURN = 2.0
 
@@ -170,7 +171,7 @@ start_time = robot.getTime()
 motor_left = robot.getDevice("motor.left")
 motor_right = robot.getDevice("motor.right")
 motor_left.setPosition(float('inf'))
-motor_right.setPosition(float('inf'))  
+motor_right.setPosition(float('inf'))
 
 #init plot
 plt.ion()
@@ -191,21 +192,31 @@ while (robot.step(timestep) != -1):
     #LIDAR
     point_cloud = lidar.getRangeImage()
 
+    #filtrage arrière
+    filtered_ranges = np.array(point_cloud)
+    num_points = len(filtered_ranges)
+    limit_angle = math.pi / 3
+
+    for i in range(num_points):
+        angle = (i / num_points) * lidar.getFov() - (lidar.getFov() / 2)
+        if abs(angle) > limit_angle:
+            filtered_ranges[i] = float('inf')
+
     lidar_points_x = []
     lidar_points_y = []
     fov = lidar.getFov()
     angle_lidar = fov/2
     angle_increment = fov / lidar.getHorizontalResolution()
+            
+    for j in filtered_ranges:
 
-    for i in point_cloud:
-
-        if not math.isinf(i):
+        if not math.isinf(j):
 
             # filtrage TP navigation
-            if abs(angle_lidar) <= math.pi / 2:
+            if abs(angle_lidar) <= math.pi / 3:
                 global_angle = real_theta + angle_lidar
-                p_x = real_pos[0] + i * math.cos(global_angle)
-                p_y = real_pos[1] + i * math.sin(global_angle)
+                p_x = real_pos[0] + j * math.cos(global_angle)
+                p_y = real_pos[1] + j * math.sin(global_angle)
                 
                 lidar_points_x.append(p_x)
                 lidar_points_y.append(p_y)
@@ -213,80 +224,104 @@ while (robot.step(timestep) != -1):
         angle_lidar -= angle_increment
 
     # ------------------------------------------------------------------
-    # --- ALGORITHME FOLLOW THE GAP (Intégré ici) ---
+    # --- ALGORITHME FOLLOW THE GAP
     # ------------------------------------------------------------------
     
-    # Etape 0: Preprocessing
-    proc_ranges = preprocess_lidar(point_cloud)
+    #filtrage données LIDAR
+    proc_ranges = preprocess_lidar(filtered_ranges)
     
-    # Etape 1: Trouver le point le plus proche
-    closest_point_idx = np.argmin(proc_ranges)
-    min_dist = proc_ranges[closest_point_idx]
+    #trouver le point le plus proche
+    valid_idxs = np.where((filtered_ranges > 0) & (~np.isinf(filtered_ranges)))[0]
+    if valid_idxs.size > 0:
+        local_min_idx = np.argmin(filtered_ranges[valid_idxs])
+        closest_point_idx = int(valid_idxs[local_min_idx])
+        min_dist = float(filtered_ranges[closest_point_idx])
+    else:
+        closest_point_idx = None
+        min_dist = None
     
-    # Etape 2: Safety Bubble (Mettre à 0 autour du point le plus proche)
-    # Rayon de la bulle en RADIANS / increment
-    # Approximation de l'angle couvert par le rayon : arc = r * theta -> theta = arc / dist
-    # Ici on simplifie souvent par un angle fixe ou calculé
-    angle_bubble = math.atan2(BUBBLE_RADIUS, min_dist) if min_dist > 0 else 0
-    bubble_radius_idx = int(math.degrees(angle_bubble) / math.degrees(angle_increment))
-    # Ou version fixe du screen : radius = rb
-    bubble_radius_idx = int(np.radians(20) / angle_increment) # Ex: 20 degrés de bulle
+    #bulle de sécurité sur le point le plus proche
+    if closest_point_idx is not None and min_dist is not None and min_dist > 0:
+        #calcul de l'angle de la bulle
+        angle_bubble = math.atan2(BUBBLE_RADIUS, min_dist)
+        bubble_radius_idx = int(math.degrees(angle_bubble) / math.degrees(angle_increment))
+        #sécurité au cas où
+        if bubble_radius_idx <= 0:
+            bubble_radius_idx = int(np.radians(20) / angle_increment) # ~20 degrés
 
-    start_bubble = max(0, closest_point_idx - bubble_radius_idx)
-    end_bubble = min(len(proc_ranges) - 1, closest_point_idx + bubble_radius_idx)
-    debug_bubble_indices = range(start_bubble, end_bubble)
-    proc_ranges[start_bubble:end_bubble] = 0 # "All nonzero points are free space" -> bubble is 0
+        start_bubble = max(0, closest_point_idx - bubble_radius_idx)
+        end_bubble = min(len(proc_ranges) - 1, closest_point_idx + bubble_radius_idx)
+        debug_bubble_indices = range(start_bubble, end_bubble+1)
+        #La région de la bulle vaut 0 pour empécher le robot d'y aller
+        proc_ranges[start_bubble:end_bubble+1] = 0
+    else:
+        #pas de bulle sans obstacle
+        debug_bubble_indices = []
     
-    # Etape 3: Max Gap
+    #on trouve l'écart le plus grand dans les données lidar
     start_gap, end_gap = find_max_gap(proc_ranges)
     
     target_speed_left = 0
     target_speed_right = 0
     
     if start_gap is not None and end_gap is not None:
-        # Etape 4: Find Best Point (Le plus loin dans le gap)
+        #le point le plus loin dans l'écart
         best_point_idx = find_best_point(start_gap, end_gap, proc_ranges)
         
-        # --- CALCUL COMMANDE MOTEUR (CONTROL) ---
-        # Convertir l'index "best_point" en angle pour piloter le robot
-        # Attention: Dans ta boucle de plot, angle_lidar commence à +FOV/2 (Gauche) et descend.
-        # Donc index 0 = Gauche (+), dernier index = Droite (-)
-        
-        # Recalcul de l'angle cible par rapport au robot
+        #ici on va diriger le robot vers ce point
+        #calcul de l'angle cible
         angle_target = (fov / 2.0) - (best_point_idx * angle_increment)
         
+        #et on fait une commande proportionnelle pour faire une courbe propre
         turn_command = KP_TURN * angle_target 
         
-        # Mixage arcade drive
+        #calcul vitesse des roues
         target_speed_left = VELOCITY_BASE - turn_command
         target_speed_right = VELOCITY_BASE + turn_command
         
-        # Saturation pour protéger les moteurs
-        max_motor = 6
+        #vitesse max
+        max_motor = 20
         target_speed_left = max(-max_motor, min(max_motor, target_speed_left))
         target_speed_right = max(-max_motor, min(max_motor, target_speed_right))
-        
-        # Debug visuel dans la console
-        # print(f"Best Idx: {best_point_idx}, Angle: {angle_target:.2f}, L: {target_speed_left:.2f}, R: {target_speed_right:.2f}")
-
-    else:
-        # Pas de gap trouvé (mur partout ?) -> Rotation sur place ou arrêt
-        target_speed_left = 2.0
-        target_speed_right = -2.0
-        print("NO GAP FOUND - Rotating")
     
+    #pas de gap trouvé
+    else:
+        
+        #orientation robot sur les données lidar
+        mid = num_points // 2
+        left_section = filtered_ranges[0:mid]
+        right_section = filtered_ranges[mid:num_points]
 
+        #on retire les valeurs abérantes
+        left_vals = left_section[~np.isinf(left_section)]
+        right_vals = right_section[~np.isinf(right_section)]
 
+        #calcul des moyennes
+        left_mean = float(np.mean(left_vals)) if left_vals.size > 0 else 0.0
+        right_mean = float(np.mean(right_vals)) if right_vals.size > 0 else 0.0
+
+        #on détermine le côté le plus dégagé
+        TURN_SPEED = 4.5
+        if left_mean >= right_mean:
+            target_speed_left = -TURN_SPEED
+            target_speed_right = TURN_SPEED
+        else:
+            target_speed_left = TURN_SPEED
+            target_speed_right = -TURN_SPEED
+
+        print(f"pas d'écart trouvé - Rotation. Moyenne Gauche={left_mean:.2f}, Moyenne Droite={right_mean:.2f}")
+    
     #affichage état robot
     print(chr(27) + "[2J")
     print(f"x : {real_pos[0]}cm / y: {real_pos[1]}cm")
     #print(command)
     print(f"forward command speed: {robot_speed}")
 
+    #appliquer les vitesses aux moteurs
     motor_left.setVelocity(target_speed_left)
     motor_right.setVelocity(target_speed_right)
 
-    #real values
+    #on stocke les données pour affichage
     list_real_x.append(real_pos[0])
     list_real_y.append(real_pos[1])
     list_real_theta.append(real_theta)
@@ -313,9 +348,9 @@ while (robot.step(timestep) != -1):
             for idx in debug_bubble_indices:
                 # On utilise la distance brute (point_cloud) car proc_ranges est à 0 ici
                 dist = point_cloud[idx]
-                if math.isinf(dist): dist = 3.0 # Sécurité
+                if math.isinf(dist): dist = 3.0
                 
-                # Conversion index -> angle (Même logique que ta boucle lidar)
+                # Conversion index -> angle
                 angle_local = (fov / 2.0) - (idx * angle_increment)
                 angle_global = real_theta + angle_local
                 
@@ -325,27 +360,13 @@ while (robot.step(timestep) != -1):
                 by_list.append(by)
             
             # Affichage en MAGENTA (cercles)
-            plt.plot(bx_list, by_list, 'mo', markersize=4, label='Obstacle Bubble')
+            plt.plot(bx_list, by_list, 'mo', markersize=4, label='Bulle obstacle')
 
-        # B. DESSINER LE RAYON DU ROBOT (Cercle pointillé autour du robot)
-        # Cela montre la marge que tu utilises pour tes calculs (BUBBLE_RADIUS)
+        #dessin du robot
         robot_circle = plt.Circle((real_pos[0], real_pos[1]), bubble_radius_idx, color='r', fill=False, linestyle='--', linewidth=1.5, label='Robot Safety Radius')
         ax.add_artist(robot_circle)
-
-        # C. AFFICHER LES CONSTANTES (Texte sur le graphique)
-        # Gap actuel trouvé
-        gap_info = f"Gap Idx: {start_gap}-{end_gap}" if start_gap else "No Gap"
-        # Texte récapitulatif
-        debug_text = (
-            f"Vitesse Base: {VELOCITY_BASE}\n"
-            f"Bubble Radius (rb): {BUBBLE_RADIUS}m\n"
-            f"K_p (Gain): {KP_TURN}\n"
-            f"{gap_info}"
-        )
-        # Affichage en haut à gauche (coordonnées graphiques)
-        plt.text(-0.95, 0.70, debug_text, fontsize=9, bbox=dict(facecolor='white', alpha=0.9, edgecolor='black'))
-        # Visualisation du "Best Point" (Gap)
-        # On recalcule sa position globale pour l'afficher en vert
+    
+        #écart le plus grand
         if 'best_point_idx' in locals() and start_gap is not None:
              best_dist = proc_ranges[best_point_idx]
              best_angle_local = (fov / 2.0) - (best_point_idx * angle_increment)
