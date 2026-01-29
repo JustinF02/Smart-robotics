@@ -1,11 +1,16 @@
 #VRML_SIM R2025a utf8
 
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/3e6ea77604ac443d9f36f74e2a17836a017b8915/projects/objects/floors/protos/CircleArena.proto"
-EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/3e6ea77604ac443d9f36f74e2a17836a017b8915/projects/appearances/protos/Roughcast.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/3e6ea77604ac443d9f36f74e2a17836a017b8915/projects/objects/backgrounds/protos/TexturedBackground.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/3e6ea77604ac443d9f36f74e2a17836a017b8915/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/3e6ea77604ac443d9f36f74e2a17836a017b8915/projects/robots/mobsya/thymio/protos/Thymio2.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/3e6ea77604ac443d9f36f74e2a17836a017b8915/projects/objects/apartment_structure/protos/Wall.proto"
+IMPORTABLE EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/living_room_furniture/protos/Armchair.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/animals/protos/Cat.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/animals/protos/Horse.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/drinks/protos/BeerBottle.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/samples/contests/tower_of_hanoi/protos/YoubotFlag.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/computers/protos/DesktopComputer.proto"
 
 WorldInfo {
   basicTimeStep 10
@@ -19,8 +24,8 @@ WorldInfo {
   ]
 }
 Viewpoint {
-  orientation 0.637377477445308 -0.049022870895325955 -0.7689907082498696 3.357131828568819
-  position 0.7242411765619016 -0.5788627500802682 2.8704090824629502
+  orientation 0.401679248742128 -0.08509714259491662 -0.9118181054640997 3.6800901163569657
+  position 1.930130059608678 -1.6021917804567911 3.0342078275108113
 }
 TexturedBackground {
 }
@@ -31,23 +36,11 @@ CircleArena {
 Wall {
   translation -0.16 0.23 0
   size 0.01 1 0.1
-  appearance Roughcast {
-    colorOverride 1 1 1
-    textureTransform TextureTransform {
-      scale 2.4 1
-    }
-  }
 }
 Wall {
   translation 0.05 0.73 0
   name "wall(12)"
   size 0.43 0.01 0.1
-  appearance Roughcast {
-    colorOverride 1 1 1
-    textureTransform TextureTransform {
-      scale 2.4 1
-    }
-  }
 }
 Wall {
   translation 0.25 0 0
@@ -118,12 +111,6 @@ Wall {
   translation -0.4 -0.27 0
   name "wall(8)"
   size 0.49 0.01 0.1
-  appearance Roughcast {
-    colorOverride 1 1 1
-    textureTransform TextureTransform {
-      scale 2.4 1
-    }
-  }
 }
 Wall {
   translation -0.16 -0.51 0
@@ -134,34 +121,16 @@ Wall {
   translation 0.46 -0.25 0
   name "wall(15)"
   size 0.43 0.01 0.1
-  appearance Roughcast {
-    colorOverride 1 1 1
-    textureTransform TextureTransform {
-      scale 2.4 1
-    }
-  }
 }
 Wall {
   translation -0.2 -0.75 0
   name "wall(18)"
   size 0.9 0.01 0.1
-  appearance Roughcast {
-    colorOverride 1 1 1
-    textureTransform TextureTransform {
-      scale 2.4 1
-    }
-  }
 }
 Wall {
   translation 0.47 0.25 0
   name "wall(14)"
   size 0.4 0.01 0.1
-  appearance Roughcast {
-    colorOverride 1 1 1
-    textureTransform TextureTransform {
-      scale 2.4 1
-    }
-  }
 }
 Wall {
   translation 0.04 -0.01 0
@@ -172,54 +141,38 @@ Wall {
   translation 0.25 -0.5 0
   name "wall(16)"
   size 0.01 0.5 0.1
-  appearance Roughcast {
-    colorOverride 1 1 1
-    textureTransform TextureTransform {
-      scale 2.4 1
-    }
-  }
 }
 Wall {
   translation -0.65 -0.5 0
   name "wall(19)"
   size 0.01 0.5 0.1
-  appearance Roughcast {
-    colorOverride 1 1 1
-    textureTransform TextureTransform {
-      scale 2.4 1
-    }
-  }
 }
 Wall {
   translation 0.27 0.49 0
   name "wall(13)"
   size 0.01 0.48 0.1
-  appearance Roughcast {
-    colorOverride 1 1 1
-    textureTransform TextureTransform {
-      scale 2.4 1
-    }
-  }
 }
 Wall {
   translation 0.67 0 0
   name "wall(6)"
   size 0.01 0.5 0.1
-  appearance Roughcast {
-    colorOverride 1 1 1
-    textureTransform TextureTransform {
-      scale 2.4 1
-    }
-  }
 }
 Thymio2 {
-  hidden position_0_0 7569.234461655065
-  hidden position_0_1 8687.730096826754
-  hidden rotation_1 0.21003859000399752 0.21003865886931292 -0.9548652012140315 4.666220337963353
-  hidden rotation_2 0.16888251092065362 0.1688825783103342 -0.9710599220688645 4.683026148564244
-  translation 0.15175808458858348 -0.15452821361146335 -2.009997452737111e-05
-  rotation 0.004753842873295422 0.0012795654704826677 0.9999878817716457 -2.6158209158583317
+  hidden position_0_0 7569.488454651387
+  hidden position_0_1 8687.826486984655
+  hidden linearVelocity_0 -0.04651668038918625 -0.06827689156344284 0.007085305835965353
+  hidden angularVelocity_0 -0.1456681782177624 0.2476406410332217 1.4405864383894218
+  hidden rotation_1 0.08904739776069655 0.08904746167099273 -0.9920388654291734 4.704396125696558
+  hidden linearVelocity_1 -0.12893511029838 -0.0766240061630856 0.0001296695294142914
+  hidden angularVelocity_1 3.910456727547987 -6.5809996003585365 1.4412068283023851
+  hidden rotation_2 0.12274549350187429 0.1227455589774348 -0.9848182936848291 4.697091500558959
+  hidden linearVelocity_2 -0.0050947577216937795 -0.003012595021998639 0.00013103436419332803
+  hidden angularVelocity_2 -0.11862683979893285 0.19676245523709945 1.4404643484735775
+  translation 0.1497137612838424 -0.15604425957457677 -2.0657028283424528e-05
+  rotation 0.005808102816068986 0.0016560375428253534 0.9999817615743473 -2.592151938123738
+  name "thymio"
   controller "thymio_variables"
+  supervisor TRUE
   bodySlot [
     Camera {
       translation 0 0 0.08
@@ -233,4 +186,41 @@ Thymio2 {
       resolution 0.017
     }
   ]
+}
+Cat {
+  translation -0.43 -0.72 0
+}
+Horse {
+  translation -0.71 -0.39 0
+}
+BeerBottle {
+  hidden linearVelocity_0 1.230573772759464e-17 -1.7533460186448715e-17 0.005797610309997003
+  hidden angularVelocity_0 1.7456262895557288e-16 1.4661696561859377e-16 2.3387282841618836e-17
+  translation 0.06 -0.55 0.00021977171137366192
+  rotation 0.8166350834885423 0.5770175568074752 -0.012565012996161617 6.145554708516432e-18
+}
+BeerBottle {
+  translation -0.01 -0.44 0.000219772
+  rotation 0.8166350834885423 0.5770175568074752 -0.012565012996161617 6.145554708516432e-18
+  name "beer bottle(3)"
+}
+BeerBottle {
+  hidden linearVelocity_0 2.3294036393800954e-18 5.2701976280866845e-18 0.005797610309997003
+  hidden angularVelocity_0 -6.546098585833983e-17 9.431387074591679e-18 8.387795930690097e-18
+  translation -0.04 -0.71 0.00021977171137366192
+  rotation 0.7015740324080468 0.7096718410850712 -0.06449616284429976 3.110196160560793e-18
+  name "beer bottle(1)"
+}
+BeerBottle {
+  hidden linearVelocity_0 1.230573772759464e-17 -1.7533460186448715e-17 0.005797610309997003
+  hidden angularVelocity_0 1.7456262895557288e-16 1.4661696561859377e-16 2.3387282841618836e-17
+  translation 0.21 -0.38 0.00021977171137366192
+  rotation 0.8166350834885423 0.5770175568074752 -0.012565012996161617 6.145554708516432e-18
+  name "beer bottle(2)"
+}
+YoubotFlag {
+  translation 0.08 0 0.03
+}
+DesktopComputer {
+  translation -0.68 -0.49 0
 }
