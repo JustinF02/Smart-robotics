@@ -20,13 +20,13 @@
 // ==== Body ====
 
 #show: latemplate.with(
-  title: [_C4 - Intelligence pour la robotique_: TP4 -- Navigation],
+  title: [_C3 - Intelligence pour la robotique_: TP4 -- Navigation],
   title_size: 21pt,
   authors_flat: (
     (name:"Justin Ferdinand"),
   ),
   header_content: (
-    left: [*SETI C4 - Intelligence pour la robotique* TP4 -- Navigation],
+    left: [*SETI C3 - Intelligence pour la robotique* TP4 -- Navigation],
   ),
   page_numbering: "1/1",
   heading_numbering: "I.A.1",
