@@ -25,7 +25,6 @@ for i in range(7):
 #5 back left
 #6 back right
 
-THRESHOLD = 150  # seuil pour détection obstacle
 FORWARD_SPEED = 8.0
 maxVelocity = 9.53
 while robot.step(timestep) != -1:

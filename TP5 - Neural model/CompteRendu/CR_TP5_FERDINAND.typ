@@ -259,7 +259,7 @@ Ici, le capteur droit ayant peu d'influence et ne rencontrant pas d'obstacle, la
 
 #colbreak()
 
-= Véhicule de brateinberg autonome avec capteurs infrarouge
+= Véhicule de brateinberg
 
 
 == Principe de l'algorithme
@@ -278,7 +278,7 @@ De plus, si les deux capteurs arrière détectent un obstacle, le robot avance p
   caption: [Capture d'écran du robot Thymio avec les capteurs infrarouge],
 ) <capteursIR>
 
-== Extrait de code (simplifié)
+== Extrait de code
 
 ```python
 #binarisation des entrées
