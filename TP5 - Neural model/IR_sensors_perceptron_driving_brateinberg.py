@@ -20,108 +20,63 @@ for i in range(7):
     sensor.enable(timestep)
     prox_sensors.append(sensor)
 
-#0 far left
-#1 left
+#0 far right
+#1 right
 #2 front
-#3 right
-#4 far right
+#3 left
+#4 far left
 #5 back left
 #6 back right
 
 print("Sampling period : ", timestep, "ms")
 
-# --- Parameters ---
+
+# --- Paramètres du modèle ANN (figure 4) ---
 FORWARD_SPEED = 8.0
 TURN_SPEED = 4.0
+MAX_SENSOR = 4000.0  # Valeur max typique pour les capteurs Thymio
 
-# Seuils d'obstacle
-THRESHOLD = 150  # seuil pour binariser la détection obstacle
-
-def wait_ms(duration_ms):
-    elapsed = 0
-    while elapsed < duration_ms:
-        robot.step(timestep)
-        elapsed += timestep
-
-# Perceptron à 3 entrées (gauche, centre, droite)
-# On choisit des poids pour illustrer la logique :
-# - Si obstacle devant, on tourne
-# - Si obstacle à gauche, on tourne à droite
-# - Si obstacle à droite, on tourne à gauche
-# - Sinon, on avance
-# Les entrées sont binaires (0: pas d'obstacle, 1: obstacle)
-
-def perceptron_3inputs(x_left, x_center, x_right, w0, w_left, w_center, w_right):
-    s = w0 + x_left * w_left + x_center * w_center + x_right * w_right
-    # 3 sorties possibles :
-    # -1 : tourner à gauche, 0 : avancer, 1 : tourner à droite
-    # Ici, on code :
-    #   si s < 0 : tourner à gauche
-    #   si s == 0 : avancer
-    #   si s > 0 : tourner à droite
-    if s < 0:
-        return -1
-    elif s == 0:
-        return 0
-    else:
-        return 1
-
-# Poids du perceptron (exemple)
-# On veut :
-# - Si obstacle devant, tourner (poids centre fort)
-# - Si obstacle à gauche, tourner à droite (poids gauche positif)
-# - Si obstacle à droite, tourner à gauche (poids droit négatif)
-w0 = 0
-w_left = 1
-w_center = 2
-w_right = -1
-
+# Poids du modèle ANN (ajustables)
+# Entrées : [1, gauche, centre, droite]
+# Sorties : y1 (avance/recule), y2 (rotation)
+W_fwd = 0.5    # Poids associé au mouvement avancer (diminué)
+W_back = -1.0  # Poids associé au mouvement reculer (obstacle devant)
+W_pos = 1.0    # Poids associé à une rotation positive de la roue (tourner à droite, augmenté)
+W_neg = -1.0   # Poids associé à une rotation négative de la roue (tourner à gauche)
+W_ctr = 2.0    # Poids associé à la rotation sur place si obstacle devant
+def activation(x):
+    # Fonction d'activation non-linéaire (tanh borné entre -1 et 1)
+    return math.tanh(x)
 
 while robot.step(timestep) != -1:
-    # 7 sensors
-    prox = [s.getValue() for s in prox_sensors]
-    print(prox)
+    # Lecture et normalisation des capteurs avant
+    left = prox_sensors[4].getValue() / MAX_SENSOR
+    center = prox_sensors[2].getValue() / MAX_SENSOR
+    right = prox_sensors[0].getValue() / MAX_SENSOR
+    bias = 1.0
 
-    # Capteurs avant
-    left = prox_sensors[1].getValue()
-    center = prox_sensors[2].getValue()
-    right = prox_sensors[3].getValue()
-    # Capteurs arrière
-    back_left = prox_sensors[5].getValue()
-    back_right = prox_sensors[6].getValue()
+    # Vecteur d'entrée
+    x = [bias, left, center, right]
 
-    # Binarisation des entrées pour le perceptron avant
-    x_left = 1 if left > THRESHOLD else 0
-    x_center = 1 if center > THRESHOLD else 0
-    x_right = 1 if right > THRESHOLD else 0
-    # Binarisation des entrées pour le perceptron arrière
-    x_back_left = 1 if back_left > THRESHOLD else 0
-    x_back_right = 1 if back_right > THRESHOLD else 0
+    # Calcul des sorties du réseau (voir schéma)
+    # y1 = sortie avance/recule
+    # y2 = sortie rotation
+    y1 = W_fwd * x[0] + W_back * x[2]  # Avance si pas d'obstacle devant, recule si obstacle devant
+    #y2 = W_pos * x[1] + W_neg * x[3]   # Tourne à droite si obstacle à gauche, à gauche si obstacle à droite
+    y2 = W_pos * x[1] + W_neg * x[3] + W_ctr * x[2] 
+    # Activation non-linéaire
+    y1 = activation(y1)
+    y2 = activation(y2)
 
-    # Perceptron arrière : avancer si obstacle détecté par les deux capteurs arrière
-    y_back = 1 if (x_back_left == 1 and x_back_right == 1) else 0
+    # Décision vitesse moteurs
+    v_left = FORWARD_SPEED * y1 - TURN_SPEED * y2
+    v_right = FORWARD_SPEED * y1 + TURN_SPEED * y2
 
-    if y_back == 1:
-        # Avancer si obstacle derrière
-        motor_left.setVelocity(FORWARD_SPEED)
-        motor_right.setVelocity(FORWARD_SPEED)
-        print("Obstacle derrière : avance !")
-    else:
-        # Navigation avant avec perceptron
-        action = perceptron_3inputs(x_left, x_center, x_right, w0, w_left, w_center, w_right)
-        if action == 0:
-            # Avancer
-            motor_left.setVelocity(FORWARD_SPEED)
-            motor_right.setVelocity(FORWARD_SPEED)
-        elif action == -1:
-            # Tourner à gauche
-            motor_left.setVelocity(0.0)
-            motor_right.setVelocity(TURN_SPEED)
-            print("Tourne à gauche (obstacle à droite ou devant)")
-            wait_ms(150)
-        elif action == 1:
-            # Tourner à droite
-            motor_left.setVelocity(TURN_SPEED)
-            motor_right.setVelocity(0.0)
-            print("Tourne à droite (obstacle à gauche ou devant)")
-            wait_ms(150)
+    # Clamp les vitesses pour éviter les valeurs extrêmes
+    v_left = max(-FORWARD_SPEED, min(FORWARD_SPEED, v_left))
+    v_right = max(-FORWARD_SPEED, min(FORWARD_SPEED, v_right))
+
+    motor_left.setVelocity(v_left)
+    motor_right.setVelocity(v_right)
+
+    print(f"Capteurs (norm): L={left:.2f} C={center:.2f} R={right:.2f} | y1={y1:.2f} y2={y2:.2f} | vL={v_left:.2f} vR={v_right:.2f}")

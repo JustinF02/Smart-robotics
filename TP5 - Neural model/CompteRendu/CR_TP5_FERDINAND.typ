@@ -34,13 +34,13 @@
 )
 
 = Introduction
-Ce TP a pour objectif de découvrir le fonctionnement du perceptron, un modèle de neurone artificiel simple, et d’en comprendre les applications à travers des exemples théoriques (modélisation d’opérateurs logiques) puis pratiques (contrôle d’un robot Thymio).
+Ce TP a pour objectif de découvrir le fonctionnement du perceptron, un modèle de neurone artificiel simple, et d'en comprendre les applications à travers des exemples théoriques (modélisation d'opérateurs logiques) puis pratiques (contrôle d'un robot Thymio).
 
-= Perceptron : implantation d’une porte logique
+= Perceptron : implantation d'une porte logique
 
-== Définition des variables d’entrée
+== Définition des variables d'entrée
 
-Les variables d’entrée du perceptron, $x_1$ et $x_2$, prennent les valeurs 0 ou 1.
+Les variables d'entrée du perceptron, $x_1$ et $x_2$, prennent les valeurs 0 ou 1.
 
 == Fonction de calcul de la somme pondérée
 
@@ -50,9 +50,9 @@ $s = w_0 + x_1 \cdot w_1 + x_2 \cdot w_2$
 
 où $w_0$ est le biais, $w_1$ et $w_2$ les poids associés aux entrées.
 
-== Fonction d’activation
+== Fonction d'activation
 
-La fonction d’activation utilisée est une fonction seuil :
+La fonction d'activation utilisée est une fonction seuil :
 
 
 $y =$
@@ -61,7 +61,7 @@ $y =$
 
 == Validation sur les opérateurs logiques
 
-On teste le perceptron pour modéliser les fonctions logiques OU (OR) et ET (AND) à l’aide de tables de vérité et de choix appropriés des poids.
+On teste le perceptron pour modéliser les fonctions logiques OU (OR) et ET (AND) à l'aide de tables de vérité et de choix appropriés des poids.
 
 ```python
 import pandas as pd
@@ -163,7 +163,7 @@ while robot.step(timestep) != -1:
     motor_right.setVelocity(0.0)
 ```
 
-Ce code montre comment un perceptron simple peut être utilisé pour réagir à la détection d’obstacles à l’arrière du robot et générer un comportement d’évitement vers l'avant.
+Ce code montre comment un perceptron simple peut être utilisé pour réagir à la détection d'obstacles à l'arrière du robot et générer un comportement d'évitement vers l'avant.
 
 = Perceptron analogue
 
@@ -196,22 +196,23 @@ Ce code illustre le fonctionnement d'un perceptron analogique : la sortie n'est
 ```sh
 Front sensor value: 261.2632287380115, Normalized: 0.2612632287380115, Output y1: 1.045052914952046
 Calculated backward speed: 8.360423319616368
-Obstacle devant : recule à 8.36
+Front obstacle : move backward at 8.36
 Front sensor value: 325.08905221648115, Normalized: 0.32508905221648116, Output y1: 1.3003562088659246
 Calculated backward speed: 10.402849670927397
-Obstacle devant : recule à 9.53
+Front obstacle : move backward at 9.53
 Front sensor value: 58.500129297333025, Normalized: 0.058500129297333024, Output y1: 0.2340005171893321
 Calculated backward speed: 1.8720041375146568
-Obstacle devant : recule à 1.87
+Front obstacle : move backward at 1.87
 ```
 
 J'observe ainsi une réponse proportionnelle à la distance de l'obstacle, avec une vitesse de recul plus élevée lorsque l'obstacle est proche.
 
+#pagebreak()
 == Perceptron analogue à deux entrées
 
-On peut généraliser le perceptron analogique à deux entrées, comme illustré dans la Fig. 3. Ici, chaque entrée correspond à la valeur normalisée d’un capteur (par exemple, capteur avant gauche et capteur avant droit). Les poids $w_1$ et $w_2$ permettent de moduler l’influence de chaque capteur sur la sortie du perceptron.
+On peut implémenter le perceptron analogique à deux entrées, comme illustré dans la figure 3 du sujet. Ici, chaque entrée correspond à la valeur normalisée d'un capteur (par exemple, capteur avant gauche et capteur avant droit). Les poids $w_1$ et $w_2$ permettent de moduler l'influence de chaque capteur sur la sortie du perceptron.
 
-Si l’on choisit $w_1$ beaucoup plus grand que $w_2$, la sortie sera principalement influencée par le capteur associé à $w_1$.
+Si l'on choisit $w_1$ beaucoup plus grand que $w_2$, la sortie sera principalement influencée par le capteur associé à $w_1$.
 
 ```python
 while robot.step(timestep) != -1:
@@ -238,24 +239,24 @@ while robot.step(timestep) != -1:
     motor_right.setVelocity(FORWARD_SPEED)
 ```
 
-Ce code montre que le capteur associé au poids le plus fort a une influence dominante sur la sortie du perceptron et donc sur la vitesse de recul du robot. En modifiant les valeurs de $w_1$ et $w_2$, on peut observer expérimentalement l’effet de chaque capteur sur le comportement du robot :
+Ce code montre que le capteur associé au poids le plus fort a une influence dominante sur la sortie du perceptron et donc sur la vitesse de recul du robot. En modifiant les valeurs de $w_1$ et $w_2$, on peut observer expérimentalement l'effet de chaque capteur sur le comportement du robot dans le même scénario :
 
 Avec capteur gauche plus influent ($w_1 = 5$, $w_2 = 1$) :
 ```sh
 Left sensor: 0.00, Right sensor: 0.00, Output y1: 0.00
 Left sensor: 0.31, Right sensor: 0.00, Output y1: 1.57
-Obstacle devant : recule à 9.53
+Front obstacle : move backward at 9.53
 ```
 
-Le capteur gauche influe fortement sur la sortie, entraînant un recul rapide.
+Le capteur gauche influe fortement sur la sortie, entraînant un recul rapide car le le mur gauche est proche.
 
 Avec capteur droit plus influent ($w_1 = 1$, $w_2 = 5$) :
 ```sh
 Left sensor: 0.01, Right sensor: 0.00, Output y1: 0.01
-Obstacle devant : recule à 0.09
+Front obstacle : move backward at 0.09
 ```
 
-Ici, le capteur droit ayant peu d'influence et ne rencontrant pas d'obstacle, la sortie reste faible mais positive car influencée par le capteur gauche.
+Ici, le capteur droit ayant peu d'influence et ne rencontrant pas d'obstacle, la sortie reste faible mais positive car toujours influencée par le capteur gauche.
 
 #colbreak()
 
@@ -264,14 +265,14 @@ Ici, le capteur droit ayant peu d'influence et ne rencontrant pas d'obstacle, la
 
 == Principe de l'algorithme
 
-Le robot utilise ses capteurs avant (gauche, centre, droite) pour détecter les obstacles et décide de tourner ou d’avancer selon la sortie du perceptron :
+Le robot utilise ses capteurs avant (gauche, centre, droite) pour détecter les obstacles et décide de tourner ou d'avancer selon la sortie du perceptron :
 
 - Si obstacle devant, il tourne sur lui-même.
 - Si obstacle à gauche, il tourne à droite.
 - Si obstacle à droite, il tourne à gauche.
 - Sinon, il avance.
 
-De plus, si les deux capteurs arrière détectent un obstacle, le robot avance pour éviter de rester bloqué. Les rayons infrarouges de Thymio sont visibles sur la figure @capteursIR.
+De plus, si les deux capteurs arrière détectent un obstacle, le robot avance pour éviter de rester bloqué. Les rayons infrarouges de Thymio sont visibles sur la @capteursIR.
 
 #figure(
   image("/img/photo_robot.png"),
@@ -280,46 +281,115 @@ De plus, si les deux capteurs arrière détectent un obstacle, le robot avance p
 
 == Extrait de code
 
+
+Le code suivant implémente le modèle de la @ANNmodel pour la navigation autonome du robot Thymio. Les capteurs avant sont normalisés et utilisés comme entrées d'un réseau de neurones simple: la sortie y1 contrôle l'avance/recul, y2 la rotation.
+
+#text("Explication des poids", weight: "bold"):
+
+
+
+- $W_"fwd"$ : favorise l'avancée du robot en l'absence d'obstacle.
+- $W_"back"$ : s'oppose à l'avancée si un obstacle est détecté devant. Plus $|W_"back"|$ est grand, plus le robot recule de manière rapide.
+- $W_"pos"$ : fait tourner le robot à droite si un obstacle est détecté à gauche.
+- $W_"neg"$ : fait tourner le robot à gauche si un obstacle est détecté à droite.
+- $W_"ctr"$ : force une rotation sur place si un obstacle est détecté devant.
+
+#text("Équations de calcul", weight: "bold"):
+
+Les sorties du réseau sont calculées ainsi:
+$
+y_1 = W_"fwd" dot 1 + W_"back" dot "center"
+$
+
+$
+y_2 = W_"pos" dot "left" + W_"neg" dot "right" + W_"ctr" dot "center"
+$
+
+où left, center et right sont les valeurs normalisées des capteurs avant gauche, centre et droite.
+
+Après application d'une fonction d'activation non-linéaire, les vitesses des roues sont données par :
+
+$
+v_"left" = V_"fwd" dot y_1 - V_"turn" dot y_2
+$
+$
+v_"right" = V_"fwd" dot y_1 + V_"turn" dot y_2
+$
+
+
+où $V_"fwd"$ est la vitesse pour avancer et $V_"turn"$ la vitesse de rotation.
+
+#figure(
+  image("/assets/image-4.png"),
+  caption: [Modèle d'ANN proposé],
+) <ANNmodel>
+
 ```python
-#binarisation des entrées
-x_left = 1 if left > THRESHOLD else 0
-x_center = 1 if center > THRESHOLD else 0
-x_right = 1 if right > THRESHOLD else 0
-x_back_left = 1 if back_left > THRESHOLD else 0
-x_back_right = 1 if back_right > THRESHOLD else 0
 
-#perceptron ET arrière : avancer si obstacle détecté par les deux capteurs arrière
-y_back = 1 if (x_back_left == 1 and x_back_right == 1) else 0
+FORWARD_SPEED = 8.0
+TURN_SPEED = 4.0
+MAX_SENSOR = 4000.0  #https://www.cyberbotics.com/doc/guide/thymio2?version=R2019a-rev1
 
-if y_back == 1:
-  #avancer si obstacle derrière
-  motor_left.setVelocity(FORWARD_SPEED)
-  motor_right.setVelocity(FORWARD_SPEED)
-else:
-  #navigation avant avec perceptron
-  action = perceptron_3inputs(x_left, x_center, x_right, w0, w_left, w_center, w_right)
-  if action == 0:
-    motor_left.setVelocity(FORWARD_SPEED)
-    motor_right.setVelocity(FORWARD_SPEED)
-  elif action == -1:
-    motor_left.setVelocity(0.0)
-    motor_right.setVelocity(TURN_SPEED)
-  elif action == 1:
-    motor_left.setVelocity(TURN_SPEED)
-    motor_right.setVelocity(0.0)
+# Entrées : [1, gauche, centre, droite]
+# Sorties : y1 (avance/recule), y2 (rotation)
+W_fwd = 0.5    # avancer
+W_back = -1.0  # reculer
+W_pos = 1.0    # tourner à droite
+W_neg = -1.0   # tourner à gauche
+
+def activation(x):
+    #activation linéaire
+    return math.tanh(x)
+
+while robot.step(timestep) != -1:
+    #normalisation
+    left = prox_sensors[4].getValue() / MAX_SENSOR
+    center = prox_sensors[2].getValue() / MAX_SENSOR
+    right = prox_sensors[0].getValue() / MAX_SENSOR
+    bias = 1.0
+
+    x = [bias, left, center, right]
+
+    # Calcul des sorties du réseau
+    # y1 = sortie avance/recule
+    # y2 = sortie rotation
+
+    #W_back > W_fwd car on veut reculer si un obstacle est devant
+    y1 = W_fwd * x[0] + W_back * x[2]
+
+
+    #si obstacle à gauche -> tourner à droite.
+    #si obstacle à droite -> tourner à gauche
+    y2 = W_pos * x[1] + W_neg * x[3]
+
+    #sorties activées
+    y1 = activation(y1)
+    y2 = activation(y2)
+
+    #vitesse des roues
+    v_left = FORWARD_SPEED * y1 - TURN_SPEED * y2
+    v_right = FORWARD_SPEED * y1 + TURN_SPEED * y2
+
+    #vitesse plafonnée
+    v_left = max(-FORWARD_SPEED, min(FORWARD_SPEED, v_left))
+    v_right = max(-FORWARD_SPEED, min(FORWARD_SPEED, v_right))
+
+    motor_left.setVelocity(v_left)
+    motor_right.setVelocity(v_right)
+
+    print(f"Capteurs (norm): L={left:.2f} C={center:.2f} R={right:.2f} | y1={y1:.2f} y2={y2:.2f} | vL={v_left:.2f} vR={v_right:.2f}")
 ```
 
-Ce code permet au robot de naviguer de façon réactive et autonome, en s’appuyant sur un perceptron pour la prise de décision à partir des capteurs. Je remarque que la navigation reste naïve car le robot peut se retrouver face à un mur et tourner dans le mauvais sens.
+Je remarque alors que le robot thymio réagit de manière fluide à la présence des murs dans le parcours. Il est capable de faire un tour complet selon la simulation puisque son raisonnement qui reste naîf ne lui permet pas de comprendre qu'elle est la direction prendre. Il lui arrive ainsi de faire demi-tour et repartir en sens inverse.
 
-Cela s'explique par le fait que l'activation du capteur central seul emploie le poids fort $"w_center" = 2$, donnant une sortie activée = 1, ce qui fait tourner le robot à gauche. Si le robot se retrouve face à un mur, il tournera toujours à gauche, restant bloqué.
-
+Deux vidéos démontrent cette capacité de navigation autonome dans le dossier, l'une dans un environnement sans obstacle, l'autre avec.
 
 #colbreak()
 = Conclusion
 
 
 #hidden_heading[Conclusion]
-#emphasis_text("Pour conclure,")
-#text(fill: color.rgb("444444"), weight: "bold")[Ce TP 
+#emphasis_text("Pour conclure, ")
+#text(fill: color.rgb("444444"), weight: "bold")[ce TP m'a permis de comprendre le fonctionnement des perceptrons, tant binaires qu'analogiques, et leur application au contrôle de robots. J'ai pu expérimenter avec différents poids et observer comment ils influencent le comportement du robot Thymio dans Webots. L'implémentation d'un modèle de véhicule de Braitenberg m'a également aidé à saisir comment des réseaux de neurones simples peuvent générer des comportements complexes à partir de signaux sensoriels. Ce TP a renforcé mes compétences en programmation robotique et en intelligence artificielle appliquée à la robotique.
   ]
   #v(40em)
