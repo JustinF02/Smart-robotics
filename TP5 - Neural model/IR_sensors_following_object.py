@@ -31,24 +31,21 @@ for i in range(7):
 print("Sampling period : ", timestep, "ms")
 
 
-# --- Paramètres du modèle ANN (figure 4) ---
 FORWARD_SPEED = 8.0
 TURN_SPEED = 4.0
-MAX_SENSOR = 4000.0 
+MAX_SENSOR = 4000.0
 
-#poids du modèle ANN (ajustables)
-#entrées : [1, gauche, centre, droite]
-#sorties : y1 (avance/recule), y2 (rotation)
-W_fwd = 0.5    # Poids associé au mouvement avancer (diminué)
-W_back = -1.0  # Poids associé au mouvement reculer (obstacle devant)
-W_pos = 1.0    # Poids associé à une rotation positive de la roue (tourner à droite)
-W_neg = -1.0   # Poids associé à une rotation négative de la roue (tourner à gauche)
+W_fwd = 1.0
+W_stop = -6.0
+W_pos = -2.0
+W_neg = 2.0
+
+SEUIL_STOP = 0.6
 def activation(x):
-    #fonction d'activation non-linéaire (tanh borné entre -1 et 1)
     return math.tanh(x)
 
 while robot.step(timestep) != -1:
-    #lecture et normalisation des capteurs avant
+    
     left = prox_sensors[4].getValue() / MAX_SENSOR
     center = prox_sensors[2].getValue() / MAX_SENSOR
     right = prox_sensors[0].getValue() / MAX_SENSOR
@@ -57,19 +54,22 @@ while robot.step(timestep) != -1:
     #vecteur d'entrée
     x = [bias, left, center, right]
 
-    #calcul des sorties du réseau (voir schéma)
-    #y1 = sortie avance/recule
-    #y2 = sortie rotation
-    y1 = W_fwd * x[0] + W_back * x[2]  # Avance si pas d'obstacle devant, recule si obstacle devant
-    #y2 = W_pos * x[1] + W_neg * x[3]   # Tourne à droite si obstacle à gauche, à gauche si obstacle à droite
-    y2 = W_pos * x[1] + W_neg * x[3] + W_ctr * x[2] 
-    #activation non-linéaire
+    #calcul perceptron pour le suivi d'objet
+    y1 = W_fwd * x[0] + W_stop * center
+    y2 = W_pos * left + W_neg * right
+
     y1 = activation(y1)
     y2 = activation(y2)
 
-    #décision vitesse moteurs
-    v_left = FORWARD_SPEED * y1 - TURN_SPEED * y2
-    v_right = FORWARD_SPEED * y1 + TURN_SPEED * y2
+    #arrêt si objet proche devant
+    if center > SEUIL_STOP:
+        v_left = 0.0
+        v_right = 0.0
+        action = "STOP (objet très proche devant)"
+    else:
+        v_left = FORWARD_SPEED * y1 - TURN_SPEED * y2
+        v_right = FORWARD_SPEED * y1 + TURN_SPEED * y2
+        action = "Suivi objet (avance/tourne)"
 
     #plafonnement des vitesses
     v_left = max(-FORWARD_SPEED, min(FORWARD_SPEED, v_left))
@@ -77,5 +77,7 @@ while robot.step(timestep) != -1:
 
     motor_left.setVelocity(v_left)
     motor_right.setVelocity(v_right)
+
+    print(f"Capteurs (norm): L={left:.2f} C={center:.2f} R={right:.2f} | y1={y1:.2f} y2={y2:.2f} | vL={v_left:.2f} vR={v_right:.2f} | {action}")
 
     print(f"Capteurs (norm): L={left:.2f} C={center:.2f} R={right:.2f} | y1={y1:.2f} y2={y2:.2f} | vL={v_left:.2f} vR={v_right:.2f}")

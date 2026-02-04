@@ -38,6 +38,8 @@ Ce TP a pour objectif de découvrir le fonctionnement du perceptron, un modèle 
 
 = Perceptron : implantation d'une porte logique
 
+Le dossier de rendu contient un notebook jupyter 'TP5_neural_model_intro.ipynb' qui implémente les codes suivants.
+
 == Définition des variables d'entrée
 
 Les variables d'entrée du perceptron, $x_1$ et $x_2$, prennent les valeurs 0 ou 1.
@@ -133,7 +135,7 @@ print(df_et)
 
 = Exemple d'application sur webots
 
-Dans cette application, on utilise un perceptron pour contrôler le robot Thymio dans Webots à partir de ses capteurs infrarouge arrière. Les valeurs des capteurs arrière gauche et arrière droit sont binarisées, puis passées en entrée d'un perceptron modélisant une porte logique ET. Si les deux capteurs détectent un obstacle, le robot avance pour s'éloigner de l'obstacle. Sinon, il s'arrête.
+Dans cette partie, on utilise un perceptron pour contrôler le robot Thymio dans Webots à partir de ses capteurs infrarouge arrière. Les valeurs des capteurs arrière gauche et arrière droit sont binarisées, puis passées en entrée d'un perceptron modélisant une porte logique ET. Si les deux capteurs détectent un obstacle, le robot avance pour s'éloigner de l'obstacle. Sinon, il s'arrête.
 
 Pour implémenter cela, j'ai repris mon code du TP1 en modifiant le contrôle de navigation par le perceptron ET arrière.
 
@@ -284,15 +286,29 @@ De plus, si les deux capteurs arrière détectent un obstacle, le robot avance p
 
 Le code suivant implémente le modèle de la @ANNmodel pour la navigation autonome du robot Thymio. Les capteurs avant sont normalisés et utilisés comme entrées d'un réseau de neurones simple: la sortie y1 contrôle l'avance/recul, y2 la rotation.
 
+#figure(
+  image("/assets/image-4.png"),
+  caption: [Modèle d'ANN proposé],
+) <ANNmodel>
+
 #text("Explication des poids", weight: "bold"):
 
 
 
 - $W_"fwd"$ : favorise l'avancée du robot en l'absence d'obstacle.
-- $W_"back"$ : s'oppose à l'avancée si un obstacle est détecté devant. Plus $|W_"back"|$ est grand, plus le robot recule de manière rapide.
+- $W_"back"$ : s'oppose à l'avancée si un obstacle est détecté devant. Plus $W_"back"$ est grand, plus le robot recule de manière rapide.
 - $W_"pos"$ : fait tourner le robot à droite si un obstacle est détecté à gauche.
 - $W_"neg"$ : fait tourner le robot à gauche si un obstacle est détecté à droite.
-- $W_"ctr"$ : force une rotation sur place si un obstacle est détecté devant.
+
+- Il n'y a pas de relation directe entre $W_"back"$ et $W_"pos"$ ainsi qu'entre $W_"back"$ et $W_"neg"$, mais il faut que $W_"back"$ soit suffisamment grand pour que le robot recule fortement en cas d'obstacle devant, sans empêcher la rotation.
+
+- $W_"pos"$ et $W_"neg"$ doivent être inverses et équilibrés pour permettre une rotation efficace.
+
+Pour une stratégie d'évitement d'obstacle efficace, je propose les valeurs suivantes :
+- $W_"fwd"$ =0.5, 
+- $W_"back"$ =−1.0
+- $W_"pos"$ =1.0
+- $W_"neg"$ =−1.0
 
 #text("Équations de calcul", weight: "bold"):
 
@@ -302,7 +318,7 @@ y_1 = W_"fwd" dot 1 + W_"back" dot "center"
 $
 
 $
-y_2 = W_"pos" dot "left" + W_"neg" dot "right" + W_"ctr" dot "center"
+y_2 = W_"pos" dot "left" + W_"neg" dot "right"
 $
 
 où left, center et right sont les valeurs normalisées des capteurs avant gauche, centre et droite.
@@ -319,10 +335,7 @@ $
 
 où $V_"fwd"$ est la vitesse pour avancer et $V_"turn"$ la vitesse de rotation.
 
-#figure(
-  image("/assets/image-4.png"),
-  caption: [Modèle d'ANN proposé],
-) <ANNmodel>
+Voici l'implémentation python du perceptron pour la navigation autonome :
 
 ```python
 
@@ -380,9 +393,86 @@ while robot.step(timestep) != -1:
     print(f"Capteurs (norm): L={left:.2f} C={center:.2f} R={right:.2f} | y1={y1:.2f} y2={y2:.2f} | vL={v_left:.2f} vR={v_right:.2f}")
 ```
 
-Je remarque alors que le robot thymio réagit de manière fluide à la présence des murs dans le parcours. Il est capable de faire un tour complet selon la simulation puisque son raisonnement qui reste naîf ne lui permet pas de comprendre qu'elle est la direction prendre. Il lui arrive ainsi de faire demi-tour et repartir en sens inverse.
+Lorsque Thymio reçoit une forte contribution négative sur $y_1$ (recul) et une contribution positive sur $y_2$ (rotation), il recule et tourne pour éviter l'obstacle détecté par le capteur central.
 
-Deux vidéos démontrent cette capacité de navigation autonome dans le dossier, l'une dans un environnement sans obstacle, l'autre avec.
+Je remarque alors pendant la simulation que le robot thymio réagit de manière fluide à la présence des murs dans le parcours. Il est capable de faire un tour complet selon la simulation mais, puisque son raisonnement reste naîf, il ne lui permet pas de comprendre quelle est la direction à prendre. Il lui arrive ainsi de faire demi-tour et repartir en sens inverse. Parfois, il peut rester bloqué dans un coin si les capteurs détectent des obstacles de manière continue.
+
+Deux vidéos démontrent la capacité de navigation autonome naïve, l'une dans un environnement sans obstacle, l'autre avec.
+
+= Suivi d'objets
+
+Dans cette partie, on souhaite que le robot suive un objet selon les règles suivantes :
+- Le robot avance en l'absence d'objet.
+- Il s'arrête si le capteur central détecte un objet très proche.
+- Il tourne à gauche si un objet est détecté à gauche.
+- Il tourne à droite si un objet est détecté à droite.
+
+Pour cela, on utilise un perceptron dont la sortie $y_1$ contrôle l'avance/arrêt et $y_2$ la rotation. Les poids sont choisis pour obtenir le comportement souhaité.
+
+#text("Réponses aux questions sur le suivi d'objet", weight: "bold"):
+
+1. #text("Relation entre "+$w_"fwd"$+ " et "+$w_"stop"$, weight: "bold"):
+
+  $w_"fwd"$ favorise l'avance, $w_"stop"$ s'oppose à l'avancée si un objet est détecté devant. Pour que le robot s'arrête en présence d'un objet proche, il faut que $w_"stop"$ soit suffisamment grand par rapport à $w_"fwd"$.
+
+2. #text("Relation entre "+$w_"fwd"$ +" et " + $w_"pos"$ + " ainsi qu'entre "+ $w_"fwd"$+ " et "+$w_"neg"$, weight: "bold"):
+
+  $w_"fwd"$ agit sur l'avance/arrêt, $w_"pos"$ et $w_"neg"$ sur la rotation. Ils doivent être choisis pour que le robot puisse tourner tout en avançant.
+
+3. #text("Relation entre "+$w_"stop"$+ " et "+$w_"pos"$ + " ainsi qu'entre "+$w_"stop"$+ " et " + $w_"neg"$, weight: "bold"):
+
+  De la même manière que le véhicule de brateinberg, il n'y a pas de relation directe entre $w_"stop"$ et $w_"pos"$ ainsi qu'entre $w_"stop"$ et $w_"neg"$. Seul $W_"stop"$ doit être assez grand pour arrêter le robot.
+
+4. #text("Relation à respecter entre "+$w_"pos"$+ " et "+$w_"neg"$, weight: "bold"):
+
+  $w_"pos"$ et $w_"neg"$ doivent être de signes opposés et de même valeur pour que le robot tourne symétriquement à gauche ou à droite selon la détection.
+
+5. #text("Poids pour une stratégie de suivi d'objet", weight: "bold"):
+
+  - $w_"fwd"$ : 1.0 (avance)
+  - $w_"stop"$ : -6.0 (arrêt si objet devant)
+  - $w_"pos"$ : -2.0 (tourne à gauche si objet à gauche)
+  - $w_"neg"$ : 2.0 (tourne à droite si objet à droite)
+
+6. #text("Comportement si le capteur gauche et le capteur central détectent un obstacle simultanément", weight: "bold"):
+  
+  Le robot reçoit une faible valeur de $y_1$ (~0), et une contribution négative sur $y_2$ (tourne à gauche). Il aura tendance à s'arrêter ou à tourner sur place vers la gauche.
+
+#text("Code simplifié du perceptron pour le suivi d'objet", weight: "bold"):
+
+```python
+FORWARD_SPEED = 8.0
+TURN_SPEED = 4.0
+MAX_SENSOR = 4000.0
+W_fwd = 1.0
+W_stop = -6.0
+W_pos = -2.0
+W_neg = 2.0
+SEUIL_STOP = 0.6
+
+while robot.step(timestep) != -1:
+   left = prox_sensors[4].getValue() / MAX_SENSOR
+   center = prox_sensors[2].getValue() / MAX_SENSOR
+   right = prox_sensors[0].getValue() / MAX_SENSOR
+   y1 = W_fwd * 1.0 + W_stop * center
+   y2 = W_pos * left + W_neg * right
+   y1 = activation(y1)
+   y2 = activation(y2)
+
+   if center > SEUIL_STOP:
+      v_left = 0.0
+      v_right = 0.0
+   else:
+      v_left = FORWARD_SPEED * y1 - TURN_SPEED * y2
+      v_right = FORWARD_SPEED * y1 + TURN_SPEED * y2
+
+   v_left = max(-FORWARD_SPEED, min(FORWARD_SPEED, v_left))
+   v_right = max(-FORWARD_SPEED, min(FORWARD_SPEED, v_right))
+   motor_left.setVelocity(v_left)
+   motor_right.setVelocity(v_right)
+```
+En placant un objet devant Thymio, je remarque que celui-ci se déplace en suivant l'objet. Sa trajectoire s'ajuste à la position. Si je place l'objet devant le robot, ce dernier s'arrête. La vidéo démontrant le suivi d'objet est disponible dans le dossier du TP.
+
 
 #colbreak()
 = Conclusion

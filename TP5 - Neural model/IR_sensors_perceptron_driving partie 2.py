@@ -17,34 +17,34 @@ for i in range(7):
     sensor.enable(timestep)
     prox_sensors.append(sensor)
     
-#0 far left
-#1 left
+#0 far right
+#1 right
 #2 front
-#3 right
-#4 far right
+#3 left
+#4 far left
 #5 back left
 #6 back right
 
 FORWARD_SPEED = 8.0
 maxVelocity = 9.53
 while robot.step(timestep) != -1:
-    # Lecture des capteurs avant gauche et droit
-    left_sensor_value = prox_sensors[1].getValue()
-    right_sensor_value = prox_sensors[3].getValue()
-    # Normalisation
+    #lecture des capteurs avant gauche et droit
+    left_sensor_value = prox_sensors[3].getValue()
+    right_sensor_value = prox_sensors[1].getValue()
+    # normalisation
     x1 = left_sensor_value / 1000.0
     x2 = right_sensor_value / 1000.0
 
-    # Poids différents
+    #poids différents
     w1 = 5  # poids fort pour le capteur gauche
     w2 = 1  # poids faible pour le capteur droit
 
-    # Perceptron à deux entrées
+    #perceptron à deux entrées
     y1 = w1 * x1 + w2 * x2
 
     print(f"Left sensor: {x1:.2f}, Right sensor: {x2:.2f}, Output y1: {y1:.2f}")
 
-    # Vitesse de recul proportionnelle à la sortie
+    #vitesse de recul proportionnelle à la sortie
     backward_speed = min(max(0.0, y1 * FORWARD_SPEED), maxVelocity)
     if backward_speed > 0.05:
         motor_left.setVelocity(-backward_speed)
