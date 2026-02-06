@@ -36,6 +36,95 @@
 = Introduction
 
 
+
+= Exercice d'application robotique
+
+== Démarche suivie
+
+Pour concevoir un réseau capable d'éviter des obstacles avec la contrainte de reculer si l'objet est détecté par les deux capteurs, je me suis inspiré du TP précèdent sur les perceptrons. L'objectif est que chaque capteur influe sur le moteur opposé pour provoquer un virage à l'opposé de l'obstacle.
+
+L'implantation réalisée utilise des valeurs de capteurs normalisées entre 0 et 1. La fonction d'activation utilisée pour tous les neurones est une fonction de saturation limitant l'intervalle de sortie à $[-1, 1]$.
+
+== Modèle proposé
+
+Dans cette partie, j'utilise le modèle de réseau multicouche à deux couches illustré par la @premierReseau.
+
+- Les neurones d'entrée $x_1$ et $x_2$ correspondent respectivement aux capteurs avant-gauche et avant-droit.
+- La couche cachée ($h_1, h_2$) sert de relais pour les valeurs normalisées des capteurs.
+- La couche de sortie ($y_1, y_2$) pilote les moteurs (gauche et droit). Elle combine un biais positif pour avancer et des poids négatifs croisés pour reculer ou éviter un obstacle.
+
+#figure(
+  image("/assets/image-5.png"),
+  caption: [Modèle du réseau servant à l'évitement d'obstacles],
+) <premierReseau>
+
+== Poids du réseau
+
+Les poids ont été déterminés logiquement pour satisfaire les conditions du comportement souhaité:
+
+1. *Couche Entrée $->$ Cachée* (chaque capteur a le même poids) :
+   $ w_{11} = 1.0, quad w_{12} = 1.0 $
+
+2. *Couche Cachée $->$ Sortie* :
+   $ w_{21} = 0.0, quad w_{24} = 0.0 $ (le capteur n'influence pas son propre capteur)
+   $ w_{22} = -2.0 $ (Le capteur gauche $h_1$ influence le moteur droit $y_2$)
+   $ w_{23} = -2.0 $ (Le capteur droit $h_2$ influence le moteur gauche $y_1$)
+
+3. *Biais* :
+   $ b = 1.0 $ (Injecté à la couche de sortie pour définir la vitesse par défaut)
+
+== Observations lors de la validation expérimentale
+
+Le comportement observé du robot lors des simulations montre que son réseau de neurones répond correctement à la configuration des murs du labyrinthe. THymio est capable d'avancer en ligne droite et de tourner lorsque des angles sont détectés. De plus, s'il arrive face à un mur, thymio s'arrête et recule tout en tournant légèrement pour reprendre la route. Durant la simulation, j'ai ajouté des logs montrant les sorties $y_1$ et $y_2$ du réseau. On peut ainsi voir ces valeurs à chaque instant, confirmant la réaction du réseau à la situation courante.
+
+En modifiant $w_{21}$ et $w_{24}$ à 1, j'ai pu observer que le robot ne réagissait pas forcément moins aux obstacles malgrès le fait qu'un capteur influence son propre moteur. Cependant, la trajectoire de celui-ci était moins précise.
+En revanche, en mettant ces deux poids à -1, j'ai pu obtenir l'effet recherché de laisser le robot tourner davantage sur lui-même pour éviter un obstacle. Ainsi, chaque capteur influençait également son moteur de manière opposée pour renforcer l'évitement. Cela se voit en simulation lorsque les deux valeurs de y varient.
+
+Le code et les vidéos de la simulation sont disponibles dans le dossier Partie 1 du TP6.
+
+= Mémoire - réseaux récurrents
+
+Dans cette seconde partie, le tp aborde l'implémentation de réseaux récurrents. L'intérêt principal est d'introduire une dépendance temporelle : la sortie du réseau ne dépend plus uniquement de l'instantané des capteurs à l'instant $t$, mais aussi de l'état précédent du système (mémoire à $t-1$).
+
+== Implantation proposée
+
+Le modèle utilisé est un réseau monocouche avec connexions récurrentes. Il prend en entrée les capteurs (Gauche, Avant, Droit) et contrôle les deux moteurs.
+
+Les équations d'activation choisies sont :
+
+- $ y_1(t) = (w_{11} x_L + w_{21} x_F + w_{31} x_R + w_4 y_1(t-1) + b) $
+- $ y_2(t) = (w_{12} x_L + w_{22} x_F + w_{32} x_R + w_5 y_2(t-1) + b) $
+
+où b est le biais de marche avant et les poids $w$ ceux présents sur la @deuxiemeReseau
+
+Les sorties $y_1$ (gauche) et $y_2$ (droit) sont réinjectées à l'entrée avec les poids $w_4$ et $w_5$. 
+
+#figure(
+  image("/assets/image-7.png"),
+  caption: [Modèle de réseau récurrent implémenté],
+) <deuxiemeReseau>
+
+== Influence des poids de connexion récurrents ($w_{"reccurent"} >= 1$)
+
+Lorsque les poids des connexions récurrentes ($w_4, w_5$) sont fixés à $1.0$ (ou plus), le réseau présente un effet de mémoire persistante. Une fois que le neurone est activé, il a tendance à le rester dans le temps car sa précèdente sortie continue de l'activer.
+
+TODO: AJOUTER OBSERVATIONS, VIDEOS et tester avec un obstacle central.
+
+
+
+== Influence des poids de connexion récurrents ($0 < w_{"reccurent"} < 1$)
+
+Si les poids récurrents sont inférieurs à 1 (par ex $0.5$), l'effet est celui d'une **mémoire à court terme** (ou filtre passe-bas). L'information de l'état précédent s'estompe progressivement.
+
+**Observation expérimentale :**
+Cela lisse les trajectoires. Le robot réagit moins brusquement aux parasites capteurs. L'action d'évitement perdure un court instant après la disparition du stimulus, ce qui rend le mouvement plus fluide sans risquer de bloquer le robot dans une boucle infinie comme dans le cas précédent.
+
+
+
+
+
+
+
 #colbreak()
 = Conclusion
 

@@ -33,38 +33,51 @@ def saturation(x):
     return np.clip(x, -1.0, 1.0)
 
 #liste des poids
-# Couche Entrée vers Cachée
-w11 = 1.0  # x1 -> h1
-w12 = 1.0  # x2 -> h2
+#entrée 1
+w11 = 1.0  #influe son moteur
+w12 = -3.0 #influe le moteur opposé
 
-# Couche Cachée vers Sortie
-w21 = 0.0  # h1 -> y1
-w22 = -2.0 # h1 -> y2 évitement capteur g vers moteur d
-w23 = -2.0 # h2 -> y1 évitement capteur d vers moteur g
-w24 = 0.0  # h2 -> y2 
+#entrée 2
+w21 = -2.0  #influe arrêt moteur g
+w22 = -2.0  #influe arrêt moteur d
+
+#entrée 3
+w31 = -3.0   #influe le moteur opposé
+w32 = 1.0 #influe son moteur
+
+#sorties précèdentes
+w4 = 0.5 #influence  de la sortie précèdente
+w5 = 0.5 #influence de la sortie précèdente
 
 # Biais pour avancer par défaut
 bias = 1.0
 
+y1_prev = 0.0
+y2_prev = 0.0
+
 while robot.step(timestep) != -1:
 
     val_left = prox_sensors[1].getValue() / SENSOR_MAX_VAL
+    val_front = prox_sensors[2].getValue() / SENSOR_MAX_VAL
     val_right = prox_sensors[3].getValue() / SENSOR_MAX_VAL
     
     
     #entrée
-    X = np.array([val_left, val_right])
+    X = np.array([val_left, val_front, val_right])
+
+    y1 = saturation((X[0] * w11) + (X[1] * w21) + (X[2] * w31) + (y1_prev * w4) + bias)
+    y2 = saturation((X[0] * w12) + (X[1] * w22) + (X[2] * w32) + (y2_prev * w5) + bias)
 
 
-    #premiers neurones
-    h1 = saturation(X[0] * w11)
-    h2 = saturation(X[1] * w12)
+    print(chr(27) + "[2J")
+    print(f"left: {X[0]:.2f}, front: {X[1]:.2f}, right: {X[2]:.2f}")
+    print(f"y1: {y1:.2f}, y2: {y2:.2f}")
 
-    #seconde couche
-
-    y1 = saturation(h1 * w21 + h2 * w23 + bias)
-    y2 = saturation(h1 * w22 + h2 * w24 + bias)
+    #mise à jour de la mémoire
+    y1_prev = y1
+    y2_prev = y2
 
     # sortie
     motor_left.setVelocity(y1 * FORWARD_SPEED)
     motor_right.setVelocity(y2 * FORWARD_SPEED)
+
