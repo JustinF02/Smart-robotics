@@ -116,12 +116,8 @@ TODO: AJOUTER OBSERVATIONS, VIDEOS et tester avec un obstacle central.
 
 Si les poids récurrents sont inférieurs à 1 (par ex $0.5$), l'effet est celui d'une **mémoire à court terme** (ou filtre passe-bas). L'information de l'état précédent s'estompe progressivement.
 
-**Observation expérimentale :**
-Cela lisse les trajectoires. Le robot réagit moins brusquement aux parasites capteurs. L'action d'évitement perdure un court instant après la disparition du stimulus, ce qui rend le mouvement plus fluide sans risquer de bloquer le robot dans une boucle infinie comme dans le cas précédent.
 
-
-
-
+= 
 
 
 
