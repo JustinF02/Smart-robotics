@@ -61,11 +61,11 @@ while robot.step(timestep) != -1:
     h2 = saturation(X[1] * w12)
 
     #seconde couche
-
     y1 = saturation(h1 * w21 + h2 * w23 + bias)
     y2 = saturation(h1 * w22 + h2 * w24 + bias)
     print(chr(27) + "[2J")
     print(f"y1: {y1:.2f}, y2: {y2:.2f}")
+    
     # sortie
     motor_left.setVelocity(y1 * FORWARD_SPEED)
     motor_right.setVelocity(y2 * FORWARD_SPEED)

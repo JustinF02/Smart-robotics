@@ -80,11 +80,13 @@ Le comportement observé du robot lors des simulations montre que son réseau de
 En modifiant $w_{21}$ et $w_{24}$ à 1, j'ai pu observer que le robot ne réagissait pas forcément moins aux obstacles malgrès le fait qu'un capteur influence son propre moteur. Cependant, la trajectoire de celui-ci était moins précise.
 En revanche, en mettant ces deux poids à -1, j'ai pu obtenir l'effet recherché de laisser le robot tourner davantage sur lui-même pour éviter un obstacle. Ainsi, chaque capteur influençait également son moteur de manière opposée pour renforcer l'évitement. Cela se voit en simulation lorsque les deux valeurs de y varient.
 
-Le code et les vidéos de la simulation sont disponibles dans le dossier Partie 1 du TP6.
+Pour éviter certains obstacles, j'ai dû utiliser les capteurs latéraux plus éloignés. Il arrivait régulièrement que les capteurs avant gauche et avant droit ne détectent plus l'obstacle.
+
+Le code et la vidéo de la simulation sont disponibles dans le dossier Partie 1 du TP6.
 
 = Mémoire - réseaux récurrents
 
-Dans cette seconde partie, le tp aborde l'implémentation de réseaux récurrents. L'intérêt principal est d'introduire une dépendance temporelle : la sortie du réseau ne dépend plus uniquement de l'instantané des capteurs à l'instant $t$, mais aussi de l'état précédent du système (mémoire à $t-1$).
+Dans cette seconde partie, le tp aborde l'implémentation de réseaux récurrents. L'intérêt principal est d'introduire une dépendance temporelle : la sortie du réseau ne dépend plus uniquement de l'instantané des capteurs à l'instant $t$, mais aussi de l'état précédent du système (mémoire à $t-1$). Cela permettra de garder en mémoire la détection d'un obstacle et de corriger le problème de perte d'information rencontré dans la partie précèdente.
 
 == Implantation proposée
 
@@ -92,8 +94,13 @@ Le modèle utilisé est un réseau monocouche avec connexions récurrentes. Il p
 
 Les équations d'activation choisies sont :
 
-- $ y_1(t) = (w_{11} x_L + w_{21} x_F + w_{31} x_R + w_4 y_1(t-1) + b) $
-- $ y_2(t) = (w_{12} x_L + w_{22} x_F + w_{32} x_R + w_5 y_2(t-1) + b) $
+#[
+  #set math.equation(numbering: none)
+  $ y_1(t) = (w_{11} x_L + w_{21} x_F + w_{31} x_R \ 
+              + w_4 y_1(t-1) + b) $
+  $ y_2(t) = (w_{12} x_L + w_{22} x_F + w_{32} x_R \
+              + w_5 y_2(t-1) + b) $
+]
 
 où b est le biais de marche avant et les poids $w$ ceux présents sur la @deuxiemeReseau
 
@@ -104,17 +111,49 @@ Les sorties $y_1$ (gauche) et $y_2$ (droit) sont réinjectées à l'entrée avec
   caption: [Modèle de réseau récurrent implémenté],
 ) <deuxiemeReseau>
 
-== Influence des poids de connexion récurrents ($w_{"reccurent"} >= 1$)
+== Mise en œuvre
 
-Lorsque les poids des connexions récurrentes ($w_4, w_5$) sont fixés à $1.0$ (ou plus), le réseau présente un effet de mémoire persistante. Une fois que le neurone est activé, il a tendance à le rester dans le temps car sa précèdente sortie continue de l'activer.
+Pour tester l'effet de la mémoire, j'ai modifié le parcours de simulation pour inclure une section plus large avec un obstacle central. Cela permet d'observer comment le robot réagit lorsqu'il perd temporairement la détection de l'obstacle. Le nouveau parcours est visible sur la @parcoursSimu.
 
-TODO: AJOUTER OBSERVATIONS, VIDEOS et tester avec un obstacle central.
+J'ai utilisé plusieurs configurations de poids récurrents pour observer différents comportements de mémoire. J'ai ainsi testé des valeurs de $w_4$ et $w_5$ à 0.5, 1.0 et 1.5 pour voir comment cela affecte la persistance de l'activation.
+
+#figure(
+  image("/assets/image-11.png"),
+  caption: [Parcours de simulation utilisé pour observer les effets de mémoire],
+) <parcoursSimu>
+
+== Résultats obtenus
+
+Les résultats suivants montrent la commande de la sortie y2 obtenue avec différentes valeurs de poids récurrents.
+
+Sur la figure @NoMemory, on observe que sans mémoire, la sortie $y_2$ retourne rapidement à 1.0 dès que le capteur ne détecte plus l'obstacle, ce qui peut entraîner une perte de contrôle et une trajectoire erratique.
+
+#figure(
+  image("/assets/image-17.png"),
+  caption: [Sortie sans mémoire],
+) <NoMemory>
+
+#figure(
+  image("/assets/image-20.png"),
+  caption: [Effet d'une mémoire avec $w_4 = w_5 = 1.5$],
+) <RecurrentMemory1.5>
+
+#figure(
+  image("/assets/image-19.png"),
+  caption: [Effet d'une mémoire avec $w_4 = w_5 = 1.0$],
+) <RecurrentMemory1.0>
+#figure(
+  image("/assets/image-18.png"),
+  caption: [Effet d'une mémoire avec $w_4 = w_5 = 0.5$],
+) <RecurrentMemory0.5>
+
+Sur les @RecurrentMemory1.5, @RecurrentMemory1.0 et @RecurrentMemory0.5, on observe que l'introduction de la mémoire permet à la sortie $y_2$ de rester activée plus longtemps même lorsque le capteur ne détecte plus l'obstacle. En revanche, l'introduction de la mémoire entraîne un effet oscillant dans la sortie y2, apparanté au lag donné par la mémoire. Cette inertie donne un comportement moins vif et persistant.
+
+Mettre un poids fort peut entraîner une persistance excessive, rendant thymio moins réactif à un nouvel obstacle. Le neurone reste activé trop longtemps.
+
+Mettre un poids réduit sur la mémoire ($w_4 = w_5 = 0.5$) permet de limiter l'effet d'inertie tout en réalisant un lissage sur la commande.
 
 
-
-== Influence des poids de connexion récurrents ($0 < w_{"reccurent"} < 1$)
-
-Si les poids récurrents sont inférieurs à 1 (par ex $0.5$), l'effet est celui d'une **mémoire à court terme** (ou filtre passe-bas). L'information de l'état précédent s'estompe progressivement.
 
 
 = 
