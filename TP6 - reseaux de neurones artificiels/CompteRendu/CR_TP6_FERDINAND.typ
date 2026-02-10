@@ -154,9 +154,51 @@ Mettre un poids fort peut entraîner une persistance excessive, rendant thymio m
 Mettre un poids réduit sur la mémoire ($w_4 = w_5 = 0.5$) permet de limiter l'effet d'inertie tout en réalisant un lissage sur la commande.
 
 
+= JUSTIN, TOUTE LA PARTIE EN DESSOUS EST SUREMENT A REVOIR
+#colbreak()
+= Filtre spatial
 
+== Exercice d'application sur Webots
 
-= 
+== Problématique
+Le robot devait respecter deux contraintes comportementales contradictoires avec une architecture de Braitenberg :
+1.  *Attraction* vers un objet isolé (le robot doit se tourner vers lui).
+2.  *Arrêt* face à un mur (le robot ne doit pas avancer).
+
+== Historique des modifications
+
+=== 1. Correction de l'Attraction (Filtre Spatial)
+Initialement, le robot manifestait un comportement de peur (répulsion) face aux objets.
+
+*Analyse :* Le filtre spatial (Couche 1) génère des valeurs négatives (inhibition latérale) autour de l'objet détecté pour accentuer le contraste. Ces valeurs négatives, propagées telles quelles aux moteurs, inversaient le sens de rotation attendu.
+
+*Solution :* Nous avons appliqué une fonction de rectification de type *ReLU* (`np.maximum(Y_spatial, 0)`) en sortie du filtre spatial.
+
+*Justification :* Cela permet de ne conserver que les pics d'activation (la présence de l'objet) pour piloter l'attraction, tout en ignorant les zones d'inhibition qui causaient la répulsion.
+
+=== 2. Gestion de l'Arrêt face au Mur (Le "Nouveau Lien")
+Une fois l'attraction réglée, le robot avançait vers le mur au lieu de s'arrêter.
+*Analyse :* Face à un mur, les capteurs gauche et droit sont activés simultanément. Dans une architecture "Attraction" classique (connexions croisées positives), l'œil gauche active la roue droite et l'œil droit active la roue gauche. Résultat : les deux roues tournent vers l'avant, le robot percute le mur.
+
+*Solution : Ajout d'un lien d'inhibition ipsilatéral (`w_same`)*
+Nous avons ajouté une connexion directe avec un poids négatif entre le capteur et le moteur du même côté (ex: Capteur Gauche $->$ Moteur Gauche).
+
+*Justification mathématique :*
+L'équation de commande d'un moteur devient :
+$ V_"moteur" = w_"cross" dot H_"opposé" + w_"same" dot H_"côté" $
+
+Cette modification permet de discriminer les deux situations :
+
+- *Cas Objet (ex: à Gauche uniquement) :*
+  - Moteur Droit : Reçoit le signal croisé ($w_"cross" > 0$) $->$ Avance.
+  - Moteur Gauche : Reçoit l'inhibition directe ($w_"same" < 0$) $->$ Freine/Recule.
+  - *Résultat :* Le différentiel de vitesse est maximisé, le robot pivote très vite vers l'objet.
+
+- *Cas Mur (Gauche + Droite actifs) :*
+  - Chaque moteur reçoit à la fois l'excitation croisée et l'inhibition directe.
+  - Avec nos réglages ($w_"cross" = 1.0, w_"same" = -2.0$), la somme est négative.
+  - *Résultat :* Les moteurs se bloquent (ou reculent légèrement), assurant l'arrêt face au mur.
+
 
 
 
