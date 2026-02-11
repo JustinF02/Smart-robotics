@@ -72,7 +72,11 @@ La @ex1q2 illustre plusieurs comportements :
 
 === Question 3 : Réseau multicouche à deux couches
 
-Cette question introduit un réseau à deux couches avec deux neurones cachés. L'architecture est la suivante :
+#figure(
+    image("/assets/image-28.png"),
+    caption: [Architecture du réseau à deux couches étudié],
+) <ex1q3archi>
+Cette question introduit un réseau à deux couches avec deux neurones cachés. L'architecture visible sur la @ex1q3archi est la suivante :
 - *Couche cachée* : deux neurones recevant la même entrée $x_1$
 - *Couche de sortie* : un neurone combinant les sorties des neurones cachés
 
@@ -145,7 +149,7 @@ Les poids ont été déterminés logiquement pour satisfaire les conditions du c
 
 === Observations lors de la validation expérimentale
 
-Le comportement observé du robot lors des simulations montre que son réseau de neurones répond correctement à la configuration des murs du labyrinthe. THymio est capable d'avancer en ligne droite et de tourner lorsque des angles sont détectés. De plus, s'il arrive face à un mur, thymio s'arrête et recule tout en tournant légèrement pour reprendre la route. Durant la simulation, j'ai ajouté des logs montrant les sorties $y_1$ et $y_2$ du réseau. On peut ainsi voir ces valeurs à chaque instant, confirmant la réaction du réseau à la situation courante.
+Le comportement observé du robot lors des simulations montre que son réseau de neurones répond correctement à la configuration des murs du labyrinthe. Thymio est capable d'avancer en ligne droite et de tourner lorsque des angles sont détectés. De plus, s'il arrive face à un mur, thymio s'arrête et recule tout en tournant légèrement pour reprendre la route. Durant la simulation, j'ai ajouté des logs montrant les sorties $y_1$ et $y_2$ du réseau. On peut ainsi voir ces valeurs à chaque instant, confirmant la réaction du réseau à la situation courante.
 
 En modifiant $w_{21}$ et $w_{24}$ à 1, j'ai pu observer que le robot ne réagissait pas forcément moins aux obstacles malgrès le fait qu'un capteur influence son propre moteur. Cependant, la trajectoire de celui-ci était moins précise.
 En revanche, en mettant ces deux poids à -1, j'ai pu obtenir l'effet recherché de laisser le robot tourner davantage sur lui-même pour éviter un obstacle. Ainsi, chaque capteur influençait également son moteur de manière opposée pour renforcer l'évitement. Cela se voit en simulation lorsque les deux valeurs de y varient.
@@ -390,6 +394,6 @@ Ce comportement est visible sur la vidéo de la simulation disponible dans le do
 #hidden_heading[Conclusion]
 #emphasis_text("Pour conclure, ")
 #text(fill: color.rgb("444444"), weight: "bold")[
-  ce TP m'a permis de mieux comprendre les différentes topologies de réseaux de neurones artificiels et leur application à la robotique. J'ai pu expérimenter avec des architectures multicouches, récurrentes et des filtres spatiaux pour résoudre des problèmes d'évitement d'obstacles et de détection de contrastes spatiaux. J'ai également constaté l'importance de la configuration des poids et de la topologie du réseau pour obtenir le comportement souhaité. Enfin, j'ai pu observer les limitations de certaines architectures et l'intérêt d'introduire une mémoire pour améliorer la réactivité du robot face à des situations complexes.
+  ce TP m'a permis de mieux comprendre les différentes topologies de réseaux de neurones artificiels et leur application à la robotique. J'ai pu expérimenter avec des architectures multicouches, récurrentes et des filtres spatiaux pour résoudre des problèmes d'évitement d'obstacles et de détection de contrastes spatiaux. J'ai également constaté l'importance de la configuration des poids et de la topologie du réseau pour obtenir le comportement souhaité. 
   ]
   #v(40em)
