@@ -33,19 +33,89 @@
   column_count: 2,
 )
 
-= Introduction
+= Les topologies multicouches
+
+== Exercice 1 : Étude d'un perceptron simple
+
+=== Question 1 : Influence d'un poids unique
+
+L'objectif de cette première question est d'observer l'effet d'un poids $w_1 = -0.5$ sur la sortie d'un neurone avec fonction d'activation de saturation entre -1 et 1.
+
+Pour une entrée $x_1 in [-2.0, 2.0]$ avec un pas de 0.2, la sortie est calculée par :
+$ y_1 = "sat"(w_1 dot x_1) $
+
+où $"sat"(x) = "clip"(x, -1, 1)$.
+
+#figure(
+  image("/assets/image-23.png"),
+  caption: [Sortie y1 en fonction de l'entrée x1 avec $w_1 = -0.5$],
+) <ex1q1>
 
 
 
-= Exercice d'application robotique
+*Observations* : La @ex1q1 montre une relation linéaire dans la zone non saturée. Le poids négatif inverse la relation entrée-sortie. Les bornes de saturation (-1 et 1) sont atteintes pour des valeurs d'entrée éloignées de zéro.
 
-== Démarche suivie
+=== Question 2 : Variation des poids
+
+Cette question explore l'influence de 15 valeurs de poids différentes dans l'intervalle $[-1.0, 1.0]$ sur la même entrée.
+
+#figure(
+  image("/assets/image-24.png"),
+  caption: [Influence du poids $w_1$ sur la sortie],
+) <ex1q2>
+
+La @ex1q2 illustre plusieurs comportements :
+- Dans les zones non saturées, la relation est linéaire : $y = w dot x$
+- La pente de la fonction dépend directement de la valeur absolue du poids
+- Le signe du poids détermine le sens de la relation (positive ou négative)
+- Plus $|w|$ est grand, plus rapidement la saturation est atteinte
+
+=== Question 3 : Réseau multicouche à deux couches
+
+Cette question introduit un réseau à deux couches avec deux neurones cachés. L'architecture est la suivante :
+- *Couche cachée* : deux neurones recevant la même entrée $x_1$
+- *Couche de sortie* : un neurone combinant les sorties des neurones cachés
+
+Les poids utilisés sont :
+$ w_{11} = 1.0, quad w_{12} = 0.5 quad "(entrée → cachée)" $
+$ w_{21} = 3.0, quad w_{22} = -1.0 quad "(cachée → sortie)" $
+
+Les équations sont :
+#[
+  #set math.equation(numbering: none)
+  $ h_1 = "sat"(w_{11} dot x_1) $
+  $ h_2 = "sat"(w_{12} dot x_1) $
+  $ y = "sat"(w_{21} dot h_1 + w_{22} dot h_2) $
+]
+
+#figure(
+  image("/assets/image-26.png"),
+  caption: [Sortie du réseau à deux couches],
+) <ex1q3>
+
+La @ex1q3 montre une fonction non-linéaire plus complexe que les sorties individuelles des neurones. La sortie finale n'est pas monotone :
+- Pour $x < -1$ : le premier neurone sature à -1, le second est dans sa zone linéaire. La sortie est dominée par le second neurone.
+- Pour $-1 <= x <= 1$ : les deux neurones sont dans leur zone linéaire. La combinaison est une somme pondérée de fonctions linéaires.
+- Pour $x > 1$ : le premier neurone sature à 1. La sortie devient la différence entre une constante et la fonction du second neurone.
+
+En augmentant $w_{21}$ à 3.0 (voir @ex1q3variant), l'influence du premier neurone est amplifiée, créant une pente plus raide dans les zones où il est actif.
+
+#figure(
+  image("/assets/image-25.png"),
+  caption: [Sortie du réseau avec $w_{21} = 3.0$ (influence amplifiée)],
+) <ex1q3variant>
+
+*Conclusion* : Les réseaux multicouches permettent de créer des fonctions complexes et non-monotones à partir de combinaisons de fonctions simples (linéarité + saturation). La variation des poids modifie l'influence relative de chaque neurone sur la sortie globale.
+
+== Exercice d'application robotique
+
+=== Démarche suivie
 
 Pour concevoir un réseau capable d'éviter des obstacles avec la contrainte de reculer si l'objet est détecté par les deux capteurs, je me suis inspiré du TP précèdent sur les perceptrons. L'objectif est que chaque capteur influe sur le moteur opposé pour provoquer un virage à l'opposé de l'obstacle.
 
 L'implantation réalisée utilise des valeurs de capteurs normalisées entre 0 et 1. La fonction d'activation utilisée pour tous les neurones est une fonction de saturation limitant l'intervalle de sortie à $[-1, 1]$.
 
-== Modèle proposé
+=== Modèle proposé
 
 Dans cette partie, j'utilise le modèle de réseau multicouche à deux couches illustré par la @premierReseau.
 
@@ -58,7 +128,7 @@ Dans cette partie, j'utilise le modèle de réseau multicouche à deux couches i
   caption: [Modèle du réseau servant à l'évitement d'obstacles],
 ) <premierReseau>
 
-== Poids du réseau
+=== Poids du réseau
 
 Les poids ont été déterminés logiquement pour satisfaire les conditions du comportement souhaité:
 
@@ -73,7 +143,7 @@ Les poids ont été déterminés logiquement pour satisfaire les conditions du c
 3. *Biais* :
    $ b = 1.0 $ (Injecté à la couche de sortie pour définir la vitesse par défaut)
 
-== Observations lors de la validation expérimentale
+=== Observations lors de la validation expérimentale
 
 Le comportement observé du robot lors des simulations montre que son réseau de neurones répond correctement à la configuration des murs du labyrinthe. THymio est capable d'avancer en ligne droite et de tourner lorsque des angles sont détectés. De plus, s'il arrive face à un mur, thymio s'arrête et recule tout en tournant légèrement pour reprendre la route. Durant la simulation, j'ai ajouté des logs montrant les sorties $y_1$ et $y_2$ du réseau. On peut ainsi voir ces valeurs à chaque instant, confirmant la réaction du réseau à la situation courante.
 
@@ -88,7 +158,51 @@ Le code et la vidéo de la simulation sont disponibles dans le dossier Partie 1 
 
 Dans cette seconde partie, le tp aborde l'implémentation de réseaux récurrents. L'intérêt principal est d'introduire une dépendance temporelle : la sortie du réseau ne dépend plus uniquement de l'instantané des capteurs à l'instant $t$, mais aussi de l'état précédent du système (mémoire à $t-1$). Cela permettra de garder en mémoire la détection d'un obstacle et de corriger le problème de perte d'information rencontré dans la partie précèdente.
 
-== Implantation proposée
+== Exercice 2 : Réseau récurrent simple
+
+=== Principe et modèle
+
+L'objectif de cet exercice est d'observer l'effet d'une connexion récurrente sur le comportement temporel d'un neurone. Le modèle utilisé est le suivant :
+
+#[
+  #set math.equation(numbering: none)
+  $ y(t) = "sat"(w_"in" dot x(t) + w_"rec" dot y(t-1)) $
+]
+
+où :
+- $x(t)$ est l'entrée au temps $t$
+- $y(t)$ est la sortie au temps $t$
+- $y(t-1)$ est la sortie au temps précédent (mémoire)
+- $w_"in"$ est le poids de l'entrée (fixé à 0.5)
+- $w_"rec"$ est le poids récurrent
+- $"sat"(x) = "clip"(x, 0, 1)$ est la fonction de saturation
+
+L'entrée est un signal échelon qui s'active à $t = 5$ avec une valeur de 0.3.
+
+=== Cas testés
+
+Deux configurations ont été testées pour observer différents comportements de mémoire :
+
+*Cas (a) : Poids récurrent > 1* ($w_"rec" = 1.2$)
+- La rétroaction amplifie le signal à chaque itération
+- Comportement de mémorisation forte
+- Le neurone tend à rester actif une fois activé
+
+*Cas (b) : Poids récurrent dans [0, 1]* ($w_"rec" = 0.8$)
+- Le système se stabilise à une valeur d'équilibre
+- Comportement de filtre passe-bas ou de mémoire à court terme
+- Le système "oublie" progressivement l'historique
+
+#figure(
+  image("/assets/image-27.png"),
+  caption: [Comportement du neurone récurrent selon le poids $w_"rec"$],
+) <ex2recurrent>
+
+*Conclusion* : Le poids récurrent contrôle la persistance de la mémoire. Un poids > 1 crée une mémoire permanente (instable), tandis qu'un poids < 1 crée une mémoire qui s'estompe progressivement (stable). Ce mécanisme est fondamental pour créer des comportements temporels dans les réseaux de neurones.
+
+== Exercice d'application robotique
+
+=== Implantation proposée
 
 Le modèle utilisé est un réseau monocouche avec connexions récurrentes. Il prend en entrée les capteurs (Gauche, Avant, Droit) et contrôle les deux moteurs.
 
@@ -151,64 +265,131 @@ Sur les @RecurrentMemory1.5, @RecurrentMemory1.0 et @RecurrentMemory0.5, on obse
 
 Mettre un poids fort peut entraîner une persistance excessive, rendant thymio moins réactif à un nouvel obstacle. Le neurone reste activé trop longtemps.
 
-Mettre un poids réduit sur la mémoire ($w_4 = w_5 = 0.5$) permet de limiter l'effet d'inertie tout en réalisant un lissage sur la commande.
+Mettre un poids réduit sur la mémoire ($w_4 = w_5 = 0.5$) permet de limiter l'effet d'inertie tout en réalisant un lissage sur la commande. D'après les observations que j'ai pu faire, ($w_4 = w_5 = 0.2$) semble être un bon compromis pour garder une bonne réactivité et une mémoire.
 
-
-= JUSTIN, TOUTE LA PARTIE EN DESSOUS EST SUREMENT A REVOIR
-#colbreak()
 = Filtre spatial
+
+== Principe et objectif
+
+Le filtre spatial permet de détecter des contrastes spatiaux dans les données des capteurs. L'objectif est de distinguer un objet ponctuel d'un mur en analysant la distribution spatiale des activations. Le réseau utilise un mécanisme d'influence latérale : chaque neurone amplifie l'activation du capteur qui lui correspond tout en influençant les activations des capteurs voisins.
+
+== Architecture du réseau testé
+
+Le réseau implémenté suit la topologie de la Figure 6 du sujet. Il comporte :
+- *5 neurones d'entrée* ($x_1$ à $x_5$) : capteurs de proximité avant du robot
+- *5 neurones de sortie* ($y_1$ à $y_5$) : chacun détecte un pic spatial à une position donnée
+
+Les équations d'activation pour chaque neurone de sortie sont :
+
+#[
+  #set math.equation(numbering: none)
+  $ y_1 = "sat"(4 x_1 - 4 x_2) $
+  $ y_2 = "sat"(4 x_2 - 2 x_1 - 2 x_3) $
+  $ y_3 = "sat"(4 x_3 - 2 x_2 - 2 x_4) $
+  $ y_4 = "sat"(4 x_4 - 2 x_3 - 2 x_5) $
+  $ y_5 = "sat"(4 x_5 - 4 x_4) $
+]
+
+où $"sat"(x) = "clip"(x, 0, 1)$ est la fonction de saturation.
+
+Les poids positifs (+4) amplifient le signal du capteur principal, tandis que les poids négatifs (-2 ou -4) inhibent les capteurs voisins. Les neurones de bord ($y_1$ et $y_5$) ont une influence plus forte (-4) car ils n'ont qu'un seul voisin.
+
+== Cas d'usage testés
+
+Plusieurs configurations d'entrée ont été testées pour valider le comportement du filtre :
+
+1. *Objet ponctuel central* : $x = [0, 0, 1, 0, 0]$
+   - Seul le capteur central détecte l'objet
+
+2. *Mur en biais* : $x = [1.4, 1.2, 1.0, 0.8, 0.6]$
+   - Tous les capteurs détectent un obstacle à distances variables
+
+3. *Obstacle étendu central* : $x = [0, 1, 1, 1, 0]$
+   - L'objet est détecté sur trois capteurs centraux
+
+4. *Obstacle latéral gauche* : $x = [2.0, 1.5, 1.0, 0, 0]$
+   - L'objet est plus proche du côté gauche
+
+#figure(
+  image("/assets/image-21.png"),
+  caption: [Résultats du filtre spatial sur différentes configurations d'obstacles],
+) <resultatFiltreSpatial>
+
+== Résultats et analyse
+
+Les résultats obtenus, illustrés par la @resultatFiltreSpatial, montrent que le filtre spatial remplit correctement son rôle :
+
+- *Objet ponctuel* : La sortie $y_3$ (neurone central) est maximale (~1.0), les autres sorties sont nulles. Le contraste spatial est parfaitement détecté.
+
+- *Mur en biais* : Le neurone correspondant au point le plus proche ($y_1$) présente une activation significative. Les gradients de distance créent un pic spatial localisé.
+
+- *Obstacle étendu* : Plusieurs neurones centraux ($y_2$, $y_3$, $y_4$) s'activent, indiquant une zone de détection large. L'absence d'activation sur les bords signale que ce n'est pas un mur complet.
+
+- *Obstacle latéral* : Les neurones du côté correspondant ($y_1$, $y_2$) s'activent fortement, permettant au robot d'identifier la direction de l'objet.
+
+*Point important* : Dans le cas d'un mur parfaitement frontal où tous les capteurs détectent à la même distance ($x = [1, 1, 1, 1, 1]$), les poids négatifs des voisins compensent exactement les poids positifs centraux. Le résultat est une sortie nulle ou très faible sur tous les neurones, ce qui permet de distinguer un mur d'un objet.
+
+Cette propriété d'influence latérale permet donc au réseau de détecter automatiquement les contrastes spatiaux sans utiliser de règles conditionnelles explicites.
+
+Le code et les analyses de cette partie sont disponibles dans le notebook du TP6.
 
 == Exercice d'application sur Webots
 
-== Problématique
-Le robot devait respecter deux contraintes comportementales contradictoires avec une architecture de Braitenberg :
+Le robot doit respecter deux contraintes comportementales contradictoires avec une architecture de Braitenberg :
 1.  *Attraction* vers un objet isolé (le robot doit se tourner vers lui).
 2.  *Arrêt* face à un mur (le robot ne doit pas avancer).
 
-== Historique des modifications
+=== 1. Gestion de l'Attraction
 
-=== 1. Correction de l'Attraction (Filtre Spatial)
-Initialement, le robot manifestait un comportement de peur (répulsion) face aux objets.
+Pour gérer l'attraction vers un objet, j'ai utilisé le même filtre spatial que dans la partie précédente. Cependant, j'ai rencontré un problème : le robot était attiré vers l'objet mais aussi repoussé par les zones d'influence latérales générées par le filtre spatial.
 
-*Analyse :* Le filtre spatial (Couche 1) génère des valeurs négatives (inhibition latérale) autour de l'objet détecté pour accentuer le contraste. Ces valeurs négatives, propagées telles quelles aux moteurs, inversaient le sens de rotation attendu.
+En implémentant la topologie visible sur la @topologieAttraction, j'ai constaté que les valeurs négatives générées par le filtre spatial pour les capteurs voisins étaient propagées aux moteurs, ce qui inversait le sens de rotation attendu et provoquait une répulsion.
 
-*Solution :* Nous avons appliqué une fonction de rectification de type *ReLU* (`np.maximum(Y_spatial, 0)`) en sortie du filtre spatial.
+J'ai ainsi ajouté ces poids suivants pour les connexions du filtre spatial vers les moteurs :
 
-*Justification :* Cela permet de ne conserver que les pics d'activation (la présence de l'objet) pour piloter l'attraction, tout en ignorant les zones d'inhibition qui causaient la répulsion.
+```python
+w_cote = 2.0
+w_cote_ext = 2.0
 
-=== 2. Gestion de l'Arrêt face au Mur (Le "Nouveau Lien")
-Une fois l'attraction réglée, le robot avançait vers le mur au lieu de s'arrêter.
-*Analyse :* Face à un mur, les capteurs gauche et droit sont activés simultanément. Dans une architecture "Attraction" classique (connexions croisées positives), l'œil gauche active la roue droite et l'œil droit active la roue gauche. Résultat : les deux roues tournent vers l'avant, le robot percute le mur.
+w_front = 1.0
+w_cross = 1.0
+```
+#figure(
+  image("/assets/image-22.png"),
+  caption: [Topologie du réseau utilisé],
+) <topologieAttraction>
 
-*Solution : Ajout d'un lien d'inhibition ipsilatéral (`w_same`)*
-Nous avons ajouté une connexion directe avec un poids négatif entre le capteur et le moteur du même côté (ex: Capteur Gauche $->$ Moteur Gauche).
+Cette topologie permet de gérer l'attraction vers un objet, en prenant en compte les influences latérales.
 
-*Justification mathématique :*
-L'équation de commande d'un moteur devient :
-$ V_"moteur" = w_"cross" dot H_"opposé" + w_"same" dot H_"côté" $
+L'attraction vers l'objet est visible sur la vidéo de la simulation disponible dans le dossier Partie 3 du TP6.
 
-Cette modification permet de discriminer les deux situations :
+=== 2. Gestion de l'Arrêt face au Mur
 
-- *Cas Objet (ex: à Gauche uniquement) :*
-  - Moteur Droit : Reçoit le signal croisé ($w_"cross" > 0$) $->$ Avance.
-  - Moteur Gauche : Reçoit l'inhibition directe ($w_"same" < 0$) $->$ Freine/Recule.
-  - *Résultat :* Le différentiel de vitesse est maximisé, le robot pivote très vite vers l'objet.
+Une fois l'attraction réglée, le robot avançait vers le mur au lieu de s'arrêter. Le comportement est à réadapter pour que le robot puisse différencer un objet du mur. Les poids précèdemment utilisés pour l'attraction devraient fonctionner mais j'ai remarqué des valeurs abérantes dans les entrées des capteurs latéraux. En effet, après la remarque d'un camarade, je n'avais pas pris en compte le fait que les capteurs latéraux étaient en arc de cercle. Il faut donc appliqué un poids plus fort pour ceux-ci ou de compenser les poids du filtre spatial.
 
-- *Cas Mur (Gauche + Droite actifs) :*
-  - Chaque moteur reçoit à la fois l'excitation croisée et l'inhibition directe.
-  - Avec nos réglages ($w_"cross" = 1.0, w_"same" = -2.0$), la somme est négative.
-  - *Résultat :* Les moteurs se bloquent (ou reculent légèrement), assurant l'arrêt face au mur.
+Les nouvelles valeurs de ces points sont les suivantes :
+```python
+W_spatial = np.array([
+        [6.6, -4.0, 0.0, 0.0, 0.0],      # y1 : détecteur extrême gauche
+        [-3.2, 4.0, -2.0, 0.0, 0.0],     # y2 : détecteur gauche
+        [0.0, -2.0, 4.0, -2.0, 0.0],     # y3 : détecteur centre
+        [0.0, 0.0, -2.0, 4.0, -3.2],     # y4 : détecteur droite
+        [0.0, 0.0, 0.0, -4.0, 6.6]       # y5 : détecteur extrême droite
+    ])
+```
 
+Le rapport de valeur entre les capteurs latéraux et gauche/droite face au mur est d'environ 1.66. 
 
+Cette configuration devrait permettre au robot de s'arrêter face au mur mais un bug provoqué dans webot retourne une valeur nulle au capteur central lorsque le robot est face à un mur, ce qui empêche le comportement d'arrêt de se déclencher. J'ai essayé de compenser ce problème en augmentant les poids des capteurs latéraux mais cela n'a pas permis de régler le problème.
 
+Ce comportement est visible sur la vidéo de la simulation disponible dans le dossier Partie 3 du TP6.
 
-#colbreak()
 = Conclusion
 
 
 #hidden_heading[Conclusion]
 #emphasis_text("Pour conclure, ")
 #text(fill: color.rgb("444444"), weight: "bold")[
-  
+  ce TP m'a permis de mieux comprendre les différentes topologies de réseaux de neurones artificiels et leur application à la robotique. J'ai pu expérimenter avec des architectures multicouches, récurrentes et des filtres spatiaux pour résoudre des problèmes d'évitement d'obstacles et de détection de contrastes spatiaux. J'ai également constaté l'importance de la configuration des poids et de la topologie du réseau pour obtenir le comportement souhaité. Enfin, j'ai pu observer les limitations de certaines architectures et l'intérêt d'introduire une mémoire pour améliorer la réactivité du robot face à des situations complexes.
   ]
   #v(40em)
