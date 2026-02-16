@@ -38,7 +38,7 @@ ax_lidar.set_title("LiDAR Scan (Top View)")
 ax_lidar.set_xlim(-1, 1) # Adjust based on typical max range (meters)
 ax_lidar.set_ylim(-1, 1)
 ax_lidar.grid(True)
-scatter_lidar = ax_lidar.scatter([], [], s=10, c='red')
+scatter_lidar = ax_lidar.scatter([], [], s=10, c='blue')
 lidar_text = ax_lidar.text(0.02, 0.95, '', transform=ax_lidar.transAxes)
 
 # 1b. Camera features (Top Right)
@@ -56,7 +56,7 @@ ax_motor.set_ylim(-3.0, 3.0) # VMAX is usually around 9.5
 ax_motor.set_xlim(-0.5, 1.5)
 ax_motor.set_xticks([0, 1])
 ax_motor.set_xticklabels(['Left', 'Right'])
-bars_motor = ax_motor.bar([0, 1], [0, 0], color=['blue', 'orange'])
+bars_motor = ax_motor.bar([0, 1], [0, 0], color=['red', 'green'])
 
 # 3. Proximity Sensors (Bottom Middle)
 ax_prox = fig.add_subplot(grid[1, 1])
