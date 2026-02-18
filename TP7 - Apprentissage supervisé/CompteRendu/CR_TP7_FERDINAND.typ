@@ -187,7 +187,7 @@ La dernière approche intègre tous les capteurs disponibles pour une perception
 2. Extraction caméra HSV → normalisation [0,1]
 3. Normalisation proximité par L₁ (identique collecte de données)
 4. StandardScaler sur ensemble d'entraînement
-5. Prédiction vitesses moteurs [-1, 1] → multiplication par 2.0 pour limites réelles
+5. Prédiction vitesses moteurs [-1, 1]
 ```
 
 *Résultats d'évaluation* :
@@ -210,7 +210,7 @@ Les modèles sont entraînés avec le notebook `TP7_read_data.ipynb` qui :
 2. Sélectionne les features selon le mode choisi
 3. Applique un pipeline de normalisation (StandardScaler)
 4. Entraîne l'architecture MLP avec validation croisée
-5. Sauvegarde le modèle en pickle si $R^2 > 0.94$
+5. Sauvegarde le modèle si $R^2 > 0.94$
 
 #colbreak()
 == Intégration du modèle dans Webots
@@ -226,7 +226,7 @@ Les modèles sont entraînés avec le notebook `TP7_read_data.ipynb` qui :
 3. Chargement du modèle :
    - Path: Dans le controlleur webots
    - Format: Pipeline (StandardScaler + MLPRegressor)
-4. Boucle de contrôle (10 ms par itération) :
+4. Boucle de contrôle :
    - Lecture capteurs bruts
    - Normalisation identique à l'entraînement
    - Passage au pipeline sklearn
