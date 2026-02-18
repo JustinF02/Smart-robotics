@@ -53,10 +53,12 @@ walls_config = [
 ]
 
 MODEL_FILENAME = 'ai_controller_model_hyper_prox.model'
-FEATURE_MODE = 'lidar_camera'  # 'lidar', 'camera', 'lidar_camera'
+FEATURE_MODE = 'lidar_camera_prox'  # 'lidar', 'camera', 'prox', 'lidar_camera', 'lidar_camera_prox'
 CMD_MAX = 2.0
 CAM_H_BAND = 20
 ALPHA = 0.25  # lissage commandes
+MAX_PROX_RAW = 4500.0
+EPSILON = 1e-6
 
 
 def normalize_input_01(arr):
@@ -125,17 +127,35 @@ def get_camera_features(camera_device, cam_w, cam_h):
     return cam_features.reshape(1, -1)
 
 
-def build_model_input(feature_mode, lidar_device, camera_device, cam_w, cam_h):
+def get_prox_features(prox_sensors):
+    """Lecture et normalisation des capteurs de proximité (pipeline du dataset)"""
+    raw_prox = np.array([s.getValue() for s in prox_sensors], dtype=np.float32)
+    
+    # Pipeline identique à controleur_dataset_gen.py
+    prox_clamped = np.minimum(raw_prox, MAX_PROX_RAW)
+    prox_sqrt = np.sqrt(prox_clamped / MAX_PROX_RAW)
+    prox_sum = np.sum(prox_sqrt) + EPSILON
+    prox_norm = prox_sqrt / prox_sum
+    
+    return prox_norm.reshape(1, -1)
+
+
+def build_model_input(feature_mode, lidar_device, camera_device, cam_w, cam_h, prox_sensors=None):
     blocks = []
 
-    if feature_mode in ('lidar', 'lidar_camera'):
+    if 'lidar' in feature_mode:
         blocks.append(get_lidar_cartesian_features(lidar_device))
 
-    if feature_mode in ('camera', 'lidar_camera'):
+    if 'camera' in feature_mode:
         blocks.append(get_camera_features(camera_device, cam_w, cam_h))
 
+    if 'prox' in feature_mode:
+        if prox_sensors is None:
+            raise ValueError("prox_sensors requis pour FEATURE_MODE contenant 'prox'")
+        blocks.append(get_prox_features(prox_sensors))
+
     if not blocks:
-        raise ValueError("FEATURE_MODE invalide. Utiliser 'lidar', 'camera' ou 'lidar_camera'.")
+        raise ValueError("FEATURE_MODE invalide. Utiliser 'lidar', 'camera' et/ou 'prox'.")
 
     if len(blocks) == 1:
         return blocks[0]
@@ -180,6 +200,12 @@ cam_h = camera.getHeight()
 lidar = robot.getDevice("lidar")
 lidar.enable(timestep)
 lidar.enablePointCloud()
+
+prox_sensors = []
+for i in range(7):
+    s = robot.getDevice('prox.horizontal.' + str(i))
+    s.enable(timestep)
+    prox_sensors.append(s)
 
 #Listes pour stocker le temps et l'orientation réelle
 list_time = []
@@ -280,7 +306,7 @@ while (robot.step(timestep) != -1):
     print(f"Mode: {'MANUEL' if manual_mode else 'AUTO_IA'}")
 
     # commandes modèle (AUTO)
-    model_input = build_model_input(FEATURE_MODE, lidar, camera, cam_w, cam_h)
+    model_input = build_model_input(FEATURE_MODE, lidar, camera, cam_w, cam_h, prox_sensors)
     if expected_features is not None and model_input.shape[1] != expected_features:
         raise ValueError(
             f"Dimension mismatch: modèle attend {expected_features}, reçu {model_input.shape[1]}"
