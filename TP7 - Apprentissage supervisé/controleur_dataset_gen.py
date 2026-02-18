@@ -64,10 +64,7 @@ motor_right.setPosition(float('inf'))
 motor_left.setVelocity(0.0)
 motor_right.setVelocity(0.0)
 
-# LEDs
-led_top = robot.getDevice("leds.top")
-
-# Storage Initialization
+#storage Initialization
 storage = {
     'prox': [],
     'scans': [],
@@ -83,10 +80,10 @@ right_speed_man = 0.0
 # Smoothing State
 v_left_prev = 0.0
 v_right_prev = 0.0
-ALPHA = 0.1 # Smoothing factor (0.0=no change, 1.0=instant)
+ALPHA = 0.1
 VMAX = 2.0
 
-# Key Mapping
+#key Mapping
 KEY_FWD = Keyboard.UP
 KEY_BACK = Keyboard.DOWN
 KEY_LEFT = Keyboard.LEFT
@@ -101,7 +98,7 @@ while robot.step(timestep) != -1:
     # --- 1. SENSOR PROCESSING ---
     
     # 1.1 Proximity Sensors
-    # Pipeline: Clamp -> Sqrt -> L1 Norm
+    #pipeline: Clamp -> Sqrt -> L1 Norm
     raw_prox = np.array([s.getValue() for s in prox_sensors])
     # Eq (1)
     prox_clamped = np.minimum(raw_prox, MAX_PROX_RAW)
@@ -112,34 +109,20 @@ while robot.step(timestep) != -1:
     prox_norm = prox_sqrt / prox_sum
     
     # 1.2 LiDAR
-    # Eq (4, 5, 6)
-    # Get range image (polar distances)
     ranges = lidar.getRangeImage()
-    # Handle resolution (assuming 90 or adapt)
     n_points = len(ranges)
-    # If not 90, we follow the physical sensor reading but storage expects consistency
-    
-    # Delta theta
-    # Note: text says delta = 2pi/90 approx 0.0698
-    # We calculate based on actual n_points to be safe, or force 90 if implied.
-    # We will use the actual sensor resolution to generate coordinates.
     delta_theta = (2 * math.pi) / n_points 
     
     cartesian_scan = []
     for i in range(n_points):
         d = ranges[i]
-        # Handle inf
+        #handle inf
         if math.isinf(d):
             d = lidar.getMaxRange()
         
-        # Eq (5, 6)
-        # Note: Webots Lidar angle 0 might be front, or start of scan?
-        # Usually scan starts at right or back.
-        # Eq says: xi = d * sin(i*dt), yi = d * cos(i*dt)
-        # This implies angle = i * delta_theta
         angle = i * delta_theta
         
-        # Standard mathematical conversion
+        #standard mathematical conversion
         x = d * math.sin(angle)
         y = d * math.cos(angle)
         cartesian_scan.append([x, y])
@@ -148,25 +131,23 @@ while robot.step(timestep) != -1:
         
     # 1.3 Camera
     img_bytes = camera.getImage()
-    # Webots returns BGRA (4 channels)
+    #webots returns BGRA (4 channels)
     img_np = np.frombuffer(img_bytes, np.uint8).reshape((cam_h, cam_w, 4))
     img_bgr = cv2.cvtColor(img_np, cv2.COLOR_BGRA2BGR)
     img_hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
     
-    # Central Band
-    # Height h=20 centered
+    #central Band
+    #height h=20 centered
     y_start = int((cam_h // 2) - 10)
     y_end = int((cam_h // 2) + 10)
-    # Safety Check
+    #safety Check
     y_start = max(0, y_start)
     y_end = min(cam_h, y_end)
     
     band = img_hsv[y_start:y_end, :]
     
-    # Sectors
+    #sectors
     w_sec = cam_w // 3
-    # Slices: Left, Center, Right
-    # Check bounds
     s_left = band[:, 0:w_sec]
     s_center = band[:, w_sec:2*w_sec]
     s_right = band[:, 2*w_sec:]
@@ -179,10 +160,10 @@ while robot.step(timestep) != -1:
              cam_features.extend([0,0,0])
              continue
              
-        # Mean per channel (H, S, V)
+        #mean per channel (H, S, V)
         means = np.mean(sec, axis=(0,1))
         
-        # Normalize
+        #normalize
         h_norm = means[0] / 179.0
         s_norm = means[1] / 255.0
         v_norm = means[2] / 255.0
@@ -192,37 +173,29 @@ while robot.step(timestep) != -1:
     cam_features = np.array(cam_features)
     
     # --- 2. CONTROL ---
-    
-    # ANN Mode (Braitenberg)
-    # Inputs: x1, x2, x3 (Left, Center, Right from prox_norm)
-    # Indices: 0, 2, 4 (approximate mapping for L, C, R)
     p_left = prox_norm[0]
     p_center = prox_norm[2]
     p_right = prox_norm[4]
     
-    # Logic: Avoidance
-    # If obstacle Left -> Turn Right
-    # If obstacle Center -> Turn (biased?) or stop
-    
     target_speed = 6.0
-    k_avoid = 12.0 # Gain
+    k_avoid = 12.0
     
-    # Simple strategy: 
+    # simple strategy: 
     turn_cmd = (p_left - p_right) * k_avoid
-    # Central obstacle slows both and assists turn
+    #central obstacle slows both and assists turn
     slow_cmd = p_center * k_avoid
     
     v_l_ann = target_speed + turn_cmd - slow_cmd
     v_r_ann = target_speed - turn_cmd - slow_cmd
     
-    # Clamp ANN
+    #clamp ANN
     v_l_ann = max(min(v_l_ann, VMAX), -VMAX)
     v_r_ann = max(min(v_r_ann, VMAX), -VMAX)
 
-    # Manual Override Logic
+    #manual Override Logic
     key = keyboard.getKey()
     
-    MANUAL_STEP = 0.25  # Increment per step
+    MANUAL_STEP = 0.25  #increment per step
     
     if key == KEY_STOP:
         manual_override = True
@@ -252,40 +225,37 @@ while robot.step(timestep) != -1:
         if key == -1:
              manual_override = False
     
-    # Clamp Manual
+    #clamp Manual
     left_speed_man = max(min(left_speed_man, VMAX), -VMAX)
     right_speed_man = max(min(right_speed_man, VMAX), -VMAX)
 
-    # Target Selection
+    #target Selection
     if manual_override:
         target_l = left_speed_man
         target_r = right_speed_man
-        led_top.set(0x0000FF) # Blue for manual
     else:
         target_l = v_l_ann
         target_r = v_r_ann
-        led_top.set(0x00FF00) # Green for auto
         
-    # Output Smoothing (Low-pass Filter)
-    # Ensure command is progressive and smooth (Pas de tout ou rien)
+    #output Smoothing
+    #ensure command is progressive and smooth
     cmd_l = ALPHA * target_l + (1 - ALPHA) * v_left_prev
     cmd_r = ALPHA * target_r + (1 - ALPHA) * v_right_prev
     
-    # Update state
+    #update state
     v_left_prev = cmd_l
     v_right_prev = cmd_r
     
     motor_left.setVelocity(cmd_l)
     motor_right.setVelocity(cmd_r)
     
-    # --- 3. DATA ACCUMULATION ---
+    # --- 3. save in list ---
     storage['prox'].append(prox_norm)
     storage['scans'].append(cartesian_scan)
     storage['cam'].append(cam_features)
     storage['cmds'].append([cmd_l, cmd_r])
 
-# --- 4. HDF5 SAVING ---
-# Ensure all lists are numpy arrays
+# --- 4. enregistrement HDF5 ---
 cmds_arr = np.array(storage['cmds'])
 prox_arr = np.array(storage['prox'])
 scans_arr = np.array(storage['scans'])
@@ -303,6 +273,5 @@ try:
 except Exception as e:
     print(f"Error saving HDF5: {e}")
 
-# Cleanup
 robot.step(timestep)
 

@@ -52,8 +52,8 @@ walls_config = [
     {'pos': (0.67, 0.0), 'size': (0.01, 0.5), 'angle': 0.0}
 ]
 
-MODEL_FILENAME = 'ai_controller_model_hyper_prox.model'
-FEATURE_MODE = 'lidar_camera_prox'  # 'lidar', 'camera', 'prox', 'lidar_camera', 'lidar_camera_prox'
+MODEL_FILENAME = 'ai_controlleur_model_Lidar_camera_prox.model'
+FEATURE_MODE = 'lidar_camera_prox'
 CMD_MAX = 2.0
 CAM_H_BAND = 20
 ALPHA = 0.25  # lissage commandes
@@ -128,7 +128,6 @@ def get_camera_features(camera_device, cam_w, cam_h):
 
 
 def get_prox_features(prox_sensors):
-    """Lecture et normalisation des capteurs de proximité (pipeline du dataset)"""
     raw_prox = np.array([s.getValue() for s in prox_sensors], dtype=np.float32)
     
     # Pipeline identique à controleur_dataset_gen.py
@@ -165,15 +164,7 @@ def build_model_input(feature_mode, lidar_device, camera_device, cam_w, cam_h, p
 
     
 robot = Supervisor()
-robot_node = robot.getFromDef("Thymio")
-if robot_node is None:
-    print("[WARN] getFromDef('Thymio') a retourné None. Fallback sur getSelf().")
-    robot_node = robot.getSelf()
-
-if robot_node is None:
-    raise RuntimeError(
-        "Impossible de récupérer le nœud robot (getFromDef('Thymio') et getSelf() ont échoué)."
-    )
+robot_node = robot.getSelf()
 
 #paramètres physique
 timestep = int(robot.getBasicTimeStep())
@@ -182,16 +173,13 @@ e = 0.054
 r = 0.021
 
 #variables d'état
-x = 0.151758
-y = -0.154528
-theta = -2.615814835873021 
 robot_speed = 0
 rotation_speed = 2
 
 keyboard = robot.getKeyboard()
 keyboard.enable(timestep)
 
-# capteurs pour le modèle
+#capteurs pour le modèle
 camera = robot.getDevice("camera")
 camera.enable(timestep)
 cam_w = camera.getWidth()
@@ -207,17 +195,11 @@ for i in range(7):
     s.enable(timestep)
     prox_sensors.append(s)
 
-#Listes pour stocker le temps et l'orientation réelle
+#Listes pour stocker les valeurs de position
 list_time = []
-list_real_theta = []
-list_pos_theta = []
+list_real_x, list_real_y, list_real_theta = [], [], []
 start_time = robot.getTime()
 
-#historiques pour les graphiques
-list_pos_x, list_pos_y, list_pos_theta = [], [], []
-list_real_x, list_real_y, list_real_theta = [], [], []
-list_time = []
-start_time = robot.getTime()
 
 #moteurs
 motor_left = robot.getDevice("motor.left")
@@ -227,7 +209,7 @@ motor_right.setPosition(float('inf'))
 motor_left.setVelocity(0.0)
 motor_right.setVelocity(0.0)
 
-# chargement modèle
+#chargement modèle
 model_path = os.path.join(os.path.dirname(__file__), MODEL_FILENAME)
 with open(model_path, 'rb') as model_file:
     model = pickle.load(model_file)
@@ -237,10 +219,6 @@ print(f"Modèle chargé: {MODEL_FILENAME}")
 print(f"FEATURE_MODE: {FEATURE_MODE}")
 if expected_features is not None:
     print(f"Features attendues par le modèle: {expected_features}")
-
-#TARGETS
-target1_x = 0.178
-target1_y = -0.576
 
 #init plot
 plt.ion()    
@@ -271,11 +249,6 @@ while (robot.step(timestep) != -1):
     list_real_y.append(real_pos[1])
     list_real_theta.append(real_theta)
 
-    #estimated values
-    list_pos_x.append(x)
-    list_pos_y.append(y)
-    list_pos_theta.append(theta)
-
     list_time.append(robot.getTime() - start_time)
 
     command = keyboard.getKey()
@@ -305,12 +278,8 @@ while (robot.step(timestep) != -1):
     print(f"right motor speed :{v_r}")
     print(f"Mode: {'MANUEL' if manual_mode else 'AUTO_IA'}")
 
-    # commandes modèle (AUTO)
+    #commandes modèle par IA
     model_input = build_model_input(FEATURE_MODE, lidar, camera, cam_w, cam_h, prox_sensors)
-    if expected_features is not None and model_input.shape[1] != expected_features:
-        raise ValueError(
-            f"Dimension mismatch: modèle attend {expected_features}, reçu {model_input.shape[1]}"
-        )
 
     pred_norm = model.predict(model_input)[0]
     pred_cmd = np.clip(pred_norm * 2.0, -CMD_MAX, CMD_MAX)
@@ -362,18 +331,17 @@ while (robot.step(timestep) != -1):
     plot_counter += 1
     if plot_counter % 20 == 0:
 
-        # --- FIGURE 1 : Carte du labyrinthe (Trajectoire XY) ---
         plt.figure(1)
         plt.clf()
         ax = plt.gca()
         
-        # Dessin des murs
+        #dessin des murs
         for wall in walls_config:
             corners = get_rotated_rect_corners(wall['pos'], wall['size'], wall['angle'])
             ax.add_patch(Polygon(corners, closed=True, facecolor='red', alpha=0.5))
 
-        plt.plot(list_real_x, list_real_y, 'g--', label='Réel') # Trajectoire réelle
-        plt.plot(real_pos[0], real_pos[1], 'go') # Position réelle actuelle
+        plt.plot(list_real_x, list_real_y, 'g--', label='Réel') # Trajectoire
+        plt.plot(real_pos[0], real_pos[1], 'go') # Position actuelle
         
         plt.axis('equal')
         plt.xlim(-1.0, 1.0)
