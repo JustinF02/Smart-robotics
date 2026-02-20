@@ -87,9 +87,13 @@ Protocole expérimental : saisir THymio, le placer face au mur et reculer avec l
 
 Résultat et observation.
 
+En réalisant cette expérience, j'ai observé que les poids associés aux capteurs de proximité avant ont augmenté, ce qui indique que le robot a appris à associer ces entrées à la sortie de reculer. Le biais appliqué à Thymui a diminué, ce qui lui donne un comportement de peur face à un obstacle. Avec quelques itérations, le robot recule seul face à un mur, même sans intervention.
+
 == Apprendre à éviter un obstacle
 
-Avec une bouteille, la placer proche des capteurs d'un côté et controler le robot
+La même expérience est réalisée, mais cette fois-ci en tournant à gauche ou à droite face à un obstacle.
+
+
 
 Une fois les poids mis à jour, le robot devrait savoir à faire le tour du labyrinthe sans en avoir jamais fait un avant.
 = Conclusion
