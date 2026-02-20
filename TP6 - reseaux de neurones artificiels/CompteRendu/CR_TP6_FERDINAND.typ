@@ -3,8 +3,8 @@
 #import "@preview/subpar:0.2.2"
 #show: codly-init.with()
 
-#import "latemplate.typ": latemplate
-#import "lalib.typ": place_at, emphasis_text, insert_toc, insert_annex_page, hidden_heading
+#import "../../lib/latemplate.typ": latemplate
+#import "../../lib/lalib.typ": place_at, emphasis_text, insert_toc, insert_annex_page, hidden_heading
 
 #set par(
   first-line-indent: 1em,
