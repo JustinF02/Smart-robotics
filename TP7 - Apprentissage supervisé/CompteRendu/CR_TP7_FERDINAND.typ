@@ -130,56 +130,106 @@ Je constate donc que l'approche par régression est plus stable et converge vers
 
 Dans cette partie, j'ai appliqué les concepts d'apprentissage supervisé à un problème de contrôle de robot en utilisant un réseau de neurones artificiels pour apprendre à éviter les obstacles.
 
-== Enregistrement des sdonnées
+== Enregistrement des données
 
-J'ai utilisé le script `controleur_dataset_gen.py` pour enregistrer les données de capteurs et de commandes de vitesse du robot pendant une session de contrôle manuel. Les données comprennent les lectures des capteurs de proximité, les scans LIDAR, les commandes de vitesse manuelles, et les prédictions du réseau de neurones. J'ai ainsi réalisé plusieurs tours du circuit dans les deux sens avec des commandes manuelles.
+J'ai utilisé le script `controleur_dataset_gen.py` pour enregistrer les données de capteurs et de commandes de vitesse du robot pendant une session de contrôle manuel. Le processus de collecte s'est déroulé comme suit :
+
+*Procédure de collecte* :
+- Contrôle manuel du robot Thymio via clavier dans le simulateur Webots
+- Enregistrement synchrone des lectures capteurs et des commandes moteurs
+- Plusieurs tours du circuit dans les deux sens pour diversifier les situations
+- Sauvegarde au format HDF5 pour un accès efficace aux données
+
+*Données collectées* :
+- *Volume total* : 95 463 échantillons temporels
+- *Capteurs de proximité* : 7 capteurs IR frontaux/latéraux (valeurs normalisées)
+- *LiDAR* : scan laser 360° avec résolution angulaire fine
+- *Caméra* : images RGB de l'environnement 
+- *Commandes moteurs* : vitesses gauche/droite appliquées (ground truth)
+
+*Format de stockage* :
+- Fichier : `dataset_webots.hdf5`
+- Clés HDF5 : `thymio_prox`, `thymio_scans`, `thymio_cam`, `thymio_commands`
+- Type : float32 pour optimiser mémoire et temps d'entraînement
+
+Cette collecte par démonstration humaine constitue la base de l'apprentissage supervisé : le réseau apprendra à reproduire le comportement de pilotage observé dans ces données.
 
 == Protocoles de test et fusion progressive de capteurs
 
-=== Test 1 : Capteurs de Proximité uniquement
+=== Analyse comparative des features
 
-La première expérience réalisée a consisté à entraîner le réseau exclusivement sur les données des capteurs de proximité pour tester que notre modèle soit lisible et que les sorties moteurs soient compréhensibles par le robot.
+Les modèles sont entraînés avec le notebook `TP7_read_data.ipynb` qui :
+1. Charge le dataset HDF5 contenant les 95 463 échantillons senoriels
+2. Sélectionne les features selon le mode choisi
+3. Applique une normalisation
+4. Entraîne l'architecture MLP avec validation croisée
+5. Sauvegarde le modèle si $R^2 > 0.94$
 
-*Configuration du modèle* :
-- Architecture : 2 couches cachées de 64 neurones chacune
+#colbreak()
+=== Analyse comparative des features
+
+Pour mieux comprendre l'apport de chaque capteur, j'ai entraîné trois modèles distincts sur les mêmes données, en utilisant uniquement les capteurs de proximité, la caméra, ou le LiDAR.
+
+*Configuration commune* :
+- Architecture : 2 couches cachées de 64 neurones
 - Activation : ReLU
-- Solver : Adam (taux d'apprentissage = 1e-3)
+- Solver : Adam (learning_rate = 1e-3)
+- Early stopping : arrêt après 30 epochs sans amélioration
+- Validation : 10% des données d'entraînement
 
-*Capteurs utilisés* : 7 capteurs de proximité du Thymio (normalisés sur [0,1])
+*Résultats obtenus* :
 
-Ce test n'a pas été concluant avec un score R² de 0.55, ce qui est insuffisant pour un contrôle fiable du robot. Cependant, cela m'a permis de comprendre comment exporter le modèle après son entrainement et de vérifier que les prédictions sont dans la bonne plage pour les commandes moteurs.
+#text(size: 10pt)[
+#table(
+  columns: (auto, auto, auto, auto),
+  align: center,
+  table.header([*Feature*], [*R² test*], [*Loss finale*], [*Itérations*]),
+  [Proximité], [0.5708], [0.035818], [51],
+  [Caméra], [0.8722], [0.011327], [448],
+  [LiDAR], [0.9396], [0.003695], [108],
+)
+]
 
-=== Test 2 : Fusion LiDAR + Caméra
+=== Interprétation des courbes d'apprentissage
 
-La deuxième expérience combine deux capteurs plus riches en information :
+#figure(
+  image("/assets/image-29.png"),
+  caption: "Courbes d'apprentissage pour les trois configurations de capteurs (Proximité, Caméra, LiDAR).",
+) <CourbeApprentissage>
 
-*Capteurs utilisés* :
-- LiDAR
-- Caméra
+Les courbes de loss et d'accuracy (R² validation) visiblent sur la @CourbeApprentissage révèlent des comportements d'apprentissage très différents selon le capteur utilisé :
 
-*Configuration du modèle* :
-- Architecture : 2 couches cachées (64, 64)
-- Activation : ReLU
+*Capteurs de proximité* :
+
+Le modèle converge très rapidement et atteint un plafond de performance trop limité pour un contrôle fiable (R² ≈ 0.57). Les informations de proximités sont trop réduites pour permettre au réseau d'apprendre un comportement efficace. Dans la plupart des frames, les capteurs de proximité ne détectent rien mais thymio engage des commandes moteurs, ce qui rend l'apprentissage difficile.
+
+*Caméra* :
+
+Le modèle avec la caméra est le plus long à converger avec 448 itérations. Sa courbe de loss décroit et montre que le modèle apprend plus longtemps. L'accuracy augmente lentement et plafonne à 0.87.
+
+*LiDAR* :
+
+Le LiDAR est un bon compromis car il converge rapidement tout en offrant une précision élevée par rapport aux autres capteurs.
+
+Par la suite, j'ai testé la fusion de ces capteurs pour améliorer la précision du modèle.
+
+== Test 1 : Capteurs de Proximité uniquement
+
+La première expérience réalisée a consisté à utiliser le réseau exclusivement sur les données des capteurs de proximité pour tester que le modèle soit lisible et que les sorties moteurs soient compréhensibles par le robot.
+
+Ce test n'a pas été concluant avec un score R² de 0.57, ce qui est insuffisant pour un contrôle fiable du robot. Cependant, cela m'a permis de comprendre comment exporter le modèle après son entrainement et de vérifier que les prédictions sont dans la bonne plage pour les commandes moteurs.
+
+== Test 2 : Fusion LiDAR + Caméra
+
+La deuxième expérience combine deux capteurs plus riches en information, le lidar et la caméra qui offrent les meilleures performances individuelles.
 
 Ce modèle a obtenu un score R² de 0.92, ce qui est une amélioration significative par rapport au test précédent. L'ajout du LiDAR et de la caméra a permis au réseau d'apprendre des représentations plus complexes de l'environnement, améliorant ainsi la précision des prédictions de vitesse. En test, Thymio était capable de suivre les murs mais avait parfois des difficultés dans les virages serrés où l'absence de capteur de proximité limitait la réactivité.
 
 La capture vidéo de ce test s'intitule `lidarANDcamera_fail.mp4` et montre les limites de cette configuration, notamment dans les virages où le robot a tendance à couper les angles.
 
-=== Test 3 : Fusion Complète (LiDAR + Caméra + Proximité)
+== Test 3 : Fusion Complète (LiDAR + Caméra + Proximité)
 
-La dernière approche intègre tous les capteurs disponibles pour une perception maximale :
-
-*Capteurs utilisés* :
-- LiDAR
-- Caméra
-- Proximité
-
-*Configuration du modèle* :
-- Architecture : 2 couches cachées (64, 64)
-- Activation : ReLU
-- Solver : Adam avec `early_stopping=True`
-- Validation : 10% des données pour éviter le surapprentissage
-- Époque d'arrêt : 30 itérations sans amélioration
+La dernière approche intègre tous les capteurs disponibles pour une perception maximale.
 
 *Pipeline de normalisation* :
 ```
@@ -203,15 +253,6 @@ Pour améliorer cela, il faudrait enrichir le jeu de données par des scénarios
 
 La capture vidéo de ce test s'intitule `lidarANDcameraANDprox.mp4` et montre une amélioration significative de la capacité du robot à suivre les murs et à négocier les virages.
 
-== Entraînement du réseau de neurones
-
-Les modèles sont entraînés avec le notebook `TP7_read_data.ipynb` qui :
-1. Charge le dataset HDF5 contenant les 95 463 échantillons senoriels
-2. Sélectionne les features selon le mode choisi
-3. Applique un pipeline de normalisation (StandardScaler)
-4. Entraîne l'architecture MLP avec validation croisée
-5. Sauvegarde le modèle si $R^2 > 0.94$
-
 #colbreak()
 == Intégration du modèle dans Webots
 
@@ -233,9 +274,18 @@ Les modèles sont entraînés avec le notebook `TP7_read_data.ipynb` qui :
    - Extraction prédictions [left_velocity, right_velocity]
    - Envoi commandes moteurs
 
+#pagebreak()
 #hidden_heading[Conclusion]
 #emphasis_text("Pour conclure, ")
 #text(fill: color.rgb("444444"), weight: "bold")[
-  ce TP m'a permis de mettre en pratique les concepts d'apprentissage supervisé dans un contexte de contrôle de robot. J'ai pu expérimenter différentes architectures de réseaux de neurones et observer l'impact de la fusion de capteurs sur les performances du modèle. J'ai également constaté les limites de l'approche, notamment en termes de capacité à faire face à des situations imprévues, ce qui souligne l'importance de la diversité des données d'entraînement pour les systèmes robotiques intelligents.
+  ce TP m'a permis de mettre en pratique les concepts d'apprentissage supervisé dans un contexte de contrôle robotique réel. Les expériences de classification (Perceptron, MLP) ont d'abord démontré les limites des classifieurs linéaires face à des problèmes non-linéaires comme le XOR, et la nécessité d'architectures multicouches pour approximer des fonctions complexes.
+  
+  L'application au contrôle du robot Thymio a révélé l'importance cruciale du choix des capteurs. L'analyse comparative montre que le LiDAR surpasse nettement la caméra (R² = 0.94 vs 0.87) et les capteurs de proximité (R² = 0.57), grâce à une information structurée et peu bruitée. La fusion complète des trois modalités sensorielles atteint un score optimal de R² = 0.9654, permettant une navigation autonome fluide dans le circuit.
+  
+  L'étude des courbes d'apprentissage a mis en évidence le rôle essentiel du mécanisme d'early stopping : il permet d'optimiser le temps d'entraînement en stoppant automatiquement lorsque le modèle atteint sa capacité maximale (51 epochs pour les capteurs de proximité limités en information) ou un plateau de performance (108 epochs pour le LiDAR). La caméra, plus complexe, nécessite 448 epochs pour converger.
+  
+  Cependant, les tests en conditions réelles ont révélé une limite fondamentale de l'apprentissage supervisé par imitation : le robot ne peut gérer que les situations présentes dans les données d'entraînement. Face à un obstacle frontal, il ne sait pas reculer ou effectuer de manœuvre de dégagement, car ces comportements n'ont pas été démontrés pendant la collecte de données. Cette observation rejoint mon expérience en stage sur les modèles VLA (Vision-Language-Action) : la généralisation reste limitée sans une couverture exhaustive des cas d'usage.
+  
+  Pour améliorer la robustesse du système, il serait nécessaire d'enrichir le dataset avec des scénarios de récupération d'erreur, ou d'explorer des approches d'apprentissage par renforcement qui permettraient au robot d'apprendre des stratégies de correction autonomes. L'apprentissage supervisé reste néanmoins une approche puissante pour le transfert de compétences humaines vers un système robotique, comme en témoigne le score R² > 0.96 atteint avec la fusion sensorielle complète.
   ]
   #v(40em)
