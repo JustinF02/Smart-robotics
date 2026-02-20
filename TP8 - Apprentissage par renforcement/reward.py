@@ -3,7 +3,7 @@ from controller import Robot, Keyboard
 
 # --- Paramètres Globaux ---
 dt = 100 #ms
-ALPHA = 0.0001 #taux apprentissage
+ALPHA = 0.01 #taux apprentissage
 speed = 3
 W = np.zeros((2, 5))
 
@@ -96,27 +96,27 @@ while robot.step(timestep) != -1:
     
     # --- Etape 4 : Règle de Hebb (Algorithm 3) ---
     # Seulement si on perçoit quelque chose (pour éviter d'apprendre du bruit)
-    if np.any(x > 0.1): 
+    # if np.any(x > 0.1): 
         
-        # y1 correspond à y[0] (moteur gauche), y2 à y[1] (moteur droit)
-        y1 = y[0]
-        y2 = y[1]
+    # y1 correspond à y[0] (moteur gauche), y2 à y[1] (moteur droit)
+    y1 = y[0]
+    y2 = y[1]
+    
+    # Algorithme 3 : "for j dans {1,2,3,4,5}" (ici 0 à 4)
+    for j in range(5):
+        xj = x[j]
         
-        # Algorithme 3 : "for j dans {1,2,3,4,5}" (ici 0 à 4)
-        for j in range(5):
-            xj = x[j]
-            
-            # Ligne 3: w_jl <- w_jl + alpha * y1 * xj
-            W[0][j] = W[0][j] + ALPHA * y1 * xj
-            
-            # Ligne 4: w_jr <- w_jr + alpha * y2 * xj
-            W[1][j] = W[1][j] + ALPHA * y2 * xj
+        # Ligne 3: w_jl <- w_jl + alpha * y1 * xj
+        W[0][j] = W[0][j] + ALPHA * y1 * xj
+        
+        # Ligne 4: w_jr <- w_jr + alpha * y2 * xj
+        W[1][j] = W[1][j] + ALPHA * y2 * xj
     
     # --- Logs ---
     log_counter += 1
     if log_counter % 20 == 0:
-        # print("-" * 30)
-        # print(f"Mode: {'MANUEL' if override else 'AUTO'}")
+        print(chr(27) + "[2J")
+        print(f"Mode: {'MANUEL' if override else 'AUTO'}")
         pass
-        # print(f"Inputs (x): {np.round(x, 1)}")
-        # print("Poids W:", np.round(W, 3))
+        print(f"Inputs (x): {np.round(x, 1)}")
+        print("Poids W:", np.round(W, 3))

@@ -3,7 +3,7 @@ from controller import Robot
 
 # --- Paramètres Globaux ---
 dt = 100 #ms
-ALPHA = 0.0001 #taux apprentissage
+ALPHA = 0.001 #taux apprentissage
 speed = 3
 W = np.zeros((2, 5))
 
