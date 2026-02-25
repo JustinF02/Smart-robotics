@@ -6,8 +6,44 @@ dt = 10 #ms
 ALPHA = 0.05 #taux apprentissage
 speed = 6
 TURN_GAIN = 0.45 # < 1.0 => virage plus doux
+BASE_FORWARD = 30.0
+MODEL_GAIN = 70.0
+ACTIVATION_GAIN = 3.0
+OBSTACLE_BRAKE_GAIN = 0.95
 W = np.zeros((2, 5))
 B = np.zeros(2)
+
+
+def braitenberg(entries, weights, bias, activation_gain):
+    return np.tanh(activation_gain * (np.dot(weights, entries) + bias))
+
+
+def hebb_update(x, y, W, B, alpha):
+    if not np.any(x > 0.02):
+        return
+
+    y1 = y[0] / 100.0
+    y2 = y[1] / 100.0
+
+    for j in range(5):
+        xj = x[j]
+        W[0][j] = W[0][j] + alpha * y1 * xj
+        W[1][j] = W[1][j] + alpha * y2 * xj
+
+    B[0] = B[0] + alpha * y1
+    B[1] = B[1] + alpha * y2
+
+
+def get_manual_command_from_key(key):
+    if key == Keyboard.UP:
+        return np.array([100.0, 100.0])
+    elif key == Keyboard.DOWN:
+        return np.array([-100.0, -100.0])
+    elif key == Keyboard.LEFT:
+        return np.array([-100.0, 100.0])
+    elif key == Keyboard.RIGHT:
+        return np.array([100.0, -100.0])
+    return None
 
 def get_sensors(robot, timestep):
     names = [
@@ -28,7 +64,7 @@ def get_sensors(robot, timestep):
 robot = Robot()
 keyboard = Keyboard()
 timestep = int(robot.getBasicTimeStep())
-keyboard.enable(timestep) # Activer le clavier
+keyboard.enable(timestep)
 
 left_motor = robot.getDevice("motor.left")
 right_motor = robot.getDevice("motor.right")
@@ -39,10 +75,9 @@ right_motor.setVelocity(0.0)
 
 sensors = get_sensors(robot, timestep)
 
-#variable pour le timer
 timer = 0
-#compteur pour les logs
 log_counter = 0
+prev_key_pressed = False
 
 
 while robot.step(timestep) != -1:
@@ -53,46 +88,26 @@ while robot.step(timestep) != -1:
     
     timer = 0
 
-    # --- Etape 1 : Acquisition x (normalisé 0-1) ---
+    #acquisition entrées normalisées
     raw_values = [s.getValue() for s in sensors]
     x = np.clip(np.array(raw_values) / 4000.0, 0.0, 1.0)
     
-    # --- Etape 2 & Exo 2 : Calcul de y (Modèle ou Clavier ?) ---
+    #sortie réseau de neurones
     
-    # D'abord, on calcule ce que le robot "veut" faire (Réseau de neurones)
-    y_model = np.dot(W, x) + B
-    y = np.clip(y_model, -100, 100)
-
-    # Si rien n'est perçu, avancer doucement par défaut
-    if np.max(x) < 0.02:
-        y = np.array([30.0, 30.0])
+    y_model = braitenberg(x, W, B, ACTIVATION_GAIN)
+    obstacle_level = np.max(x)
+    base_forward = BASE_FORWARD * np.clip(1.0 - OBSTACLE_BRAKE_GAIN * obstacle_level, 0.0, 1.0)
+    y = np.array([base_forward, base_forward]) + (MODEL_GAIN * y_model)
+    y = np.clip(y, -100, 100)
     
-    # Ensuite, on regarde si l'humain intervient (Algorithme 2)
+    #supervision humaine
     key = keyboard.getKey()
-    
-    override = False # Indicateur si l'humain force la commande
-    
-    if key == Keyboard.UP:
-        y = np.array([100.0, 100.0])
-        override = True
-        #print("Enseignement: AVANCER")
-        
-    elif key == Keyboard.DOWN:
-        y = np.array([-100.0, -100.0])
-        override = True
-        #print("Enseignement: RECULER")
-        
-    elif key == Keyboard.LEFT:
-        y = np.array([-100.0, 100.0]) # Tourner sur place gauche
-        override = True
-        #print("Enseignement: GAUCHE")
-        
-    elif key == Keyboard.RIGHT:
-        y = np.array([100.0, -100.0]) # Tourner sur place droite
-        override = True
-        #print("Enseignement: DROITE")
+    manual_cmd = get_manual_command_from_key(key)
+    override = manual_cmd is not None
 
-    # Pondération de la rotation pour éviter les réactions trop violentes
+    if override:
+        y = manual_cmd
+
     forward_cmd = (y[0] + y[1]) / 2.0
     turn_cmd = ((y[1] - y[0]) / 2.0) * TURN_GAIN
     y = np.array([
@@ -101,28 +116,19 @@ while robot.step(timestep) != -1:
     ])
     y = np.clip(y, -100, 100)
 
-    # --- Etape 3 : Application aux moteurs ---
-    # Conversion y [-100, 100] -> Vitesse réelle
     v_left = (y[0] / 100.0) * speed
     v_right = (y[1] / 100.0) * speed
     
     left_motor.setVelocity(v_left)
     right_motor.setVelocity(v_right)
     
-    # --- Etape 4 : Règle de Hebb (pendant l'enseignement manuel) ---
-    if override and np.any(x > 0.02):
-        y1 = y[0] / 100.0
-        y2 = y[1] / 100.0
-
-        for j in range(5):
-            xj = x[j]
-            W[0][j] = W[0][j] + ALPHA * y1 * xj
-            W[1][j] = W[1][j] + ALPHA * y2 * xj
-
-        B[0] = B[0] + ALPHA * y1
-        B[1] = B[1] + ALPHA * y2
+    key_pressed = override
+    is_new_key_press = key_pressed and not prev_key_pressed
+    if is_new_key_press:
+        hebb_update(x, y, W, B, ALPHA)
+    prev_key_pressed = key_pressed
     
-    # --- Logs ---
+    
     log_counter += 1
     if log_counter % 20 == 0:
         print(chr(27) + "[2J")

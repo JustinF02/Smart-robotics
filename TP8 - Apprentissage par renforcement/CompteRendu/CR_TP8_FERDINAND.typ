@@ -43,12 +43,12 @@ Ce TP explore l'apprentissage non supervisé et supervisé (par démonstration) 
 Dans ce premier exercice, j'ajoute une règle de Hebb sur le robot. Le robot modifie ses poids $W$ en fonction de la corrélation entre ses entrées de capteurs de proximité et ses sorties moteurs.
 
 L'équation de mise à jour des poids est donnée par :
-$ \u{0394} W_{"ij"} = \u{0391} \cdot y_i \cdot x_j $
-où $\u{0391}$ est le taux d'apprentissage, $y_i$ l'activité du neurone moteur $i$, et $x_j$ l'entrée du capteur $j$.
+$ Delta W_"ij" = Delta dot y_i dot x_j $
+où $Delta$ est le taux d'apprentissage, $y_i$ l'activité du neurone moteur $i$, et $x_j$ l'entrée du capteur $j$.
 
 Le code implémenté dans `model.py` est le suivant :
 
-#codly(languages: ("python", ), header: "model.py")
+#codly(header: [model.py])
 ```python
 avec ALPHA = 0.01
 # ∆W = Alpha * y * x.T
@@ -62,9 +62,14 @@ W += dW
 Dans cette seconde partie, l'ajout d'un enseignement humain par clavier permet de guider le robot vers le bon comportement selon son environnement.
 La sortie $y$ est imposée par l'opérateur. La règle de Hebb de la première partie va apprendre l'association entre les entrées et les sorties des moteurs.
 
+Pour stabiliser le comportement, j'ai conservé la structure principale du script et importé trois améliorations :
+- activation non linéaire de type Braitenberg ($tanh$),
+- mise à jour Hebb déclenchée une seule fois par appui clavier,
+- freinage automatique de la vitesse d'avance quand la proximité obstacle augmente.
+
 Le script `reward.py` implémente cette logique :
 
-#codly(languages: ("python", ), header: "Mode Enseignement")
+#codly(header: [Mode Enseignement])
 ```python
 # Saisie clavier pour forcer le comportement
 key = keyboard.getKey()
@@ -75,11 +80,24 @@ elif key == Keyboard.LEFT:
 #reculer, droite
 
 # Application de la règle de Hebb avec le y imposé
-for j in range(5):
-    # w_jl <- w_jl + alpha * y1 * xj
-    W[0][j] = W[0][j] + ALPHA * y1 * x[j]
-    W[1][j] = W[1][j] + ALPHA * y2 * x[j]
+# Front montant clavier: apprentissage une seule fois par appui
+is_new_key_press = key_pressed and not prev_key_pressed
+if is_new_key_press:
+  hebb_update(x, y, W, B, ALPHA)
 ```
+
+Le calcul en mode autonome est maintenant :
+
+$ y_"model" = tanh(gamma , (W x + B)) $
+
+$ y = [v_"base", v_"base"] + k * y_"model" $
+
+avec :
+- $v_"base" = V_0 * max(0, 1 - beta * max(x))$,
+- $k$ un gain d'amplification du modèle,
+- $gamma$ le gain de l'activation $tanh$.
+
+Cette formulation évite que le robot reste bloqué contre un mur : quand les capteurs voient un obstacle, la vitesse d'avance est réduite, et la composante de rotation apprise par les poids devient dominante.
 
 == Apprendre à reculer face à un mur
 
@@ -89,13 +107,18 @@ Résultat et observation.
 
 En réalisant cette expérience, j'ai observé que les poids associés aux capteurs de proximité avant ont augmenté, ce qui indique que le robot a appris à associer ces entrées à la sortie de reculer. Le biais appliqué à Thymui a diminué, ce qui lui donne un comportement de peur face à un obstacle. Avec quelques itérations, le robot recule seul face à un mur, même sans intervention.
 
+Avec le déclenchement Hebb sur appui unique, l'apprentissage devient plus contrôlé : une action clavier correspond à un seul incrément de poids, ce qui évite les renforcements excessifs dus au maintien prolongé d'une touche.
+
 == Apprendre à éviter un obstacle
 
 La même expérience est réalisée, mais cette fois-ci en tournant à gauche ou à droite face à un obstacle.
 
-
-
 Une fois les poids mis à jour, le robot devrait savoir à faire le tour du labyrinthe sans en avoir jamais fait un avant.
+
+== Réaliser un tour complet
+
+
+
 = Conclusion
 
 
@@ -103,6 +126,6 @@ Une fois les poids mis à jour, le robot devrait savoir à faire le tour du laby
 #hidden_heading[Conclusion]
 #emphasis_text("Pour conclure, ")
 #text(fill: color.rgb("444444"), weight: "bold")[
-
+  l'intégration d'une activation non linéaire, d'un apprentissage Hebbien événementiel (sur appui clavier) et d'un freinage lié aux capteurs améliore nettement la robustesse du contrôleur. Le robot n'avance plus aveuglément contre les obstacles et exploite mieux les poids appris pour produire des comportements d'évitement et de recul cohérents.
   ]
   #v(40em)
