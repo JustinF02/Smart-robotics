@@ -167,19 +167,16 @@ Biais B:
  [-0.05 -0.095]
 ```
 
-#colbreak()
 = Conclusion
-
+#set page(columns: 1)
 #hidden_heading[Conclusion]
 #emphasis_text("Pour conclure, ")
 #text(fill: color.rgb("444444"), weight: "bold")[
-  
 
+  l'apprentissage par renforcement, tout comme l'apprentissage supervisé, ne permet pas ici au réseau de neurones d'apprendre une stratégie globale de parcours du labyrinthe. Le robot apprend surtout des réactions locales à des situations particulières : reculer face à un mur, tourner devant un obstacle, ou corriger sa trajectoire dans un virage. Ces comportements sont utiles, mais restent limités dès que l'environnement devient plus complexe.
 
-  On pourrait supposer que l'utilisation de capteurs plus précis comme le LiDAR ou la vision par caméra permettrait d'améliorer les performances du robot.
+  Cette limite est renforcée par la qualité de perception des capteurs de proximité de Thymio, qui varie selon la forme et la nature des obstacles. Lorsque les entrées perçues ne reflètent pas correctement la situation réelle, le réseau produit des commandes moins adaptées.
 
-  De même que l'apprentissage supervisé, le réseau de neurone n'apprend pas à faire le tour du labyrinthe, mais plutôt à réagir à des situations spécifiques. Par exemple, il apprend à reculer face à un mur ou à tourner face à un obstacle, mais il ne développe pas une stratégie globale pour naviguer dans le labyrinthe. Il lui arrive de se retourner si un obstacle l'empêche de voir la bonne direction à prendre. De plus, la mauvaise perception des capteurs de Thymio selon le type d'obstacle (couleurs ou forme) empêche le réseau de percevoir les entrées réelles et donc d'avoir une sortie idéale pour la situation donnée.
-
-  Une technologie à explorer pour améliorer la compréhension sémantique de l'environnement serait l'utilisation de réseaux de neurones plus complexes comme les VLA (Vision-Language-Action). Il s'agit de LLM (Language Model) qui intègrent des capacités de vision et d'action, permettant au robot de comprendre les instructions en langage naturel tout en percevant son environnement visuellement. Cela pourrait permettre à Thymio de mieux interpréter les obstacles et les situations rencontrées, et d'adapter son comportement de manière plus intelligente et contextuelle.
+  Pour améliorer les performances, une piste concrète serait d'exploiter des capteurs plus fiables, comme le LiDAR ou la vision par caméra. À plus long terme, l'intégration de modèles plus avancés, par exemple des architectures de type VLA (Vision-Language-Action), pourrait offrir une meilleure compréhension du contexte et permettre au robot d'adopter un comportement plus robuste et plus intelligent. J'avais prototypé un bras robotique en stage ayant comme tâche de placer une assiette et des couverts pour montrer que celui-ci faisait preuve de compréhension de sa tâche et de son environnement.
   ]
   #v(40em)
