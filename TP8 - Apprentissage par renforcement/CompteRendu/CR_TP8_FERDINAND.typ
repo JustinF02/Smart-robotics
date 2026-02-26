@@ -43,17 +43,32 @@ Ce TP explore l'apprentissage par renforcement en opposition à l'apprentissage 
 Dans ce premier exercice, j'ajoute une règle de Hebb sur le robot. Le robot modifie ses poids $W$ en fonction de la corrélation entre ses entrées de capteurs de proximité et ses sorties moteurs.
 
 L'équation de mise à jour des poids est donnée par :
-$ Delta W_"ij" = Delta dot y_i dot x_j $
-où $Delta$ est le taux d'apprentissage, $y_i$ l'activité du neurone moteur $i$, et $x_j$ l'entrée du capteur $j$.
+$ W_"ij" = W_"ij" + alpha dot y_i dot x_j $
+où $alpha$ est le taux d'apprentissage, $y_i$ l'activité du neurone moteur $i$ et $x_j$ la valeur du capteur de proximité $j$.
 
 Le code implémenté dans `reward.py` est le suivant :
 
 #codly(header: [reward.py])
 ```python
-avec ALPHA = 0.05
-# ∆W = Alpha * y * x.T
-dW = ALPHA * np.outer(y, x)
-W += dW
+#fonction d'activation de type Braitenberg
+def braitenberg(entries, weights, bias, activation_gain):
+    return np.tanh(activation_gain * (np.dot(weights, entries) + bias))
+
+#fonction de mise à jour des poids selon la règle de Hebb
+def hebb_update(x, y, W, B, alpha):
+    if not np.any(x > 0.02):
+        return
+
+    y1 = y[0] / 100.0
+    y2 = y[1] / 100.0
+
+    for j in range(5):
+        xj = x[j]
+        W[0][j] = W[0][j] + alpha * y1 * xj
+        W[1][j] = W[1][j] + alpha * y2 * xj
+
+    B[0] = B[0] + alpha * y1
+    B[1] = B[1] + alpha * y2
 ``` 
 
 Ici, j'ai mis un taux d'apprentissage de 0.05 pour que les poids évoluent plus rapidement lors de mes tests.
@@ -90,7 +105,7 @@ if is_new_key_press:
 prev_key_pressed = key_pressed
 ```
 
-Le calcul en mode autonome est maintenant :
+Le calcul des commandes moteurs :
 
 #codly(header: [Contrôle moteur])
 ```python
@@ -114,7 +129,7 @@ Avec TURN_GAIN une valeur qui permet d'adoucir les virages et speed une vitesse 
 
 #text("Résultat et observation :", weight: "bold")
 
-En réalisant cette expérience, j'ai observé que les poids associés aux capteurs de proximité avant ont augmenté, ce qui indique que le robot a appris à associer ces entrées à la sortie de reculer. Le biais appliqué à Thymui a diminué, ce qui lui donne un comportement de peur face à un obstacle. Avec quelques itérations, le robot recule seul face à un mur, même sans intervention. Ce comportement est visible sur la vidéo `mouvement_de_peur.mp4`.
+En réalisant cette expérience, j'ai observé que les poids associés aux capteurs de proximité avant ont augmenté, ce qui indique que le robot a appris à associer ces entrées à la sortie de reculer. Le biais appliqué à Thymio a diminué, ce qui lui donne un comportement de peur face à un obstacle. Avec quelques itérations, le robot recule seul face à un mur, même sans intervention. Ce comportement est visible sur la vidéo `mouvement_de_peur.mp4`.
 
 ```
 Poids W:
@@ -126,7 +141,7 @@ Poids W:
 
 //TODO: insérer vidéo du robot qui fait le tour du labyrinthe avec des obstacles
 
-Je rencontre beaucoup de diffultés pour réaliser un entraînement de thymio dans le circuit. En effet, le robot a du mal à percevoir les obstacles que je lui donne. Qu'il s'agisse de bouteilles, d'animaux ou des murs ajoutés, les capteurs de proximité indiquent des valeurs nulles alors même que l'obstacle se trouve face à lui.
+J'ai rencontré beaucoup de diffultés pour réaliser un entraînement de thymio dans le circuit avec obstacles. En effet, le robot a du mal à percevoir les obstacles que je lui donne. Qu'il s'agisse de bouteilles, d'animaux ou des murs ajoutés, les capteurs de proximité indiquent des valeurs nulles alors même que l'obstacle se trouve face à lui. Pour régler ce problème, je pourrais utiliser le LiDAR de Thymio pour l'entraînement, cela assurerait un meilleur comportement mais cela sort des objectifs de ce TP qui se base sur le véhicule de Braitenberg.
 
 #figure(
   image("/assets/image-30.png"),
@@ -135,11 +150,11 @@ Je rencontre beaucoup de diffultés pour réaliser un entraînement de thymio da
 
 #figure(
   image("/assets/image-31.png"),
-  caption: "Circuit de test avec obstacles sur la course"
+  caption: "Circuit de test proposé avec obstacles sur la course"
 )
 == Réaliser un tour complet sans obstacles
 
-Pour réaliser un tour complet sans obstacles, j'ai placé le robot dans le circuit et j'ai utilisé les touches de direction pour le guider dans les virages. Après un tour dans chaque sens, le robot a réussi à faire un tour complet de manière autonome, en ajustant sa trajectoire en fonction des entrées des capteurs et des virages.
+Pour réaliser un tour complet sans obstacles, j'ai placé le robot dans le circuit et j'ai utilisé les touches de direction pour le guider dans les virages. Après un tour dans chaque sens, le robot a réussi à faire plusieurs tours complets dans les deux sens de manière autonome, en ajustant sa trajectoire en fonction des entrées des capteurs et des virages. Cela montre que Thymio est capable d'apprendre à naviguer très rapidement dans le circuit. Bien évidemment, contrairement à mon implémentation d'un apprentissage supervisé, le robot n'est pas aussi performant dans ses réactions et cela s'explique par un entraînement plus court et moins précis. J'ajoute également que l'apprentissage par renforcement permet de contrer une limitation remarquée lors du TP précédent : Le réseau de neurone ne savait pas comment réagir face à des situations non rencontrées dans le jeu de données d'entraînement, alors que dans ce TP, le robot peut apprendre à réagir à de nouvelles situations au fur et à mesure de son expérience.
 
 La vidéo est dispobible dans `tour_complet_sans_obstacles.mp4`.
 
@@ -152,6 +167,7 @@ Biais B:
  [-0.05 -0.095]
 ```
 
+#colbreak()
 = Conclusion
 
 #hidden_heading[Conclusion]
@@ -163,5 +179,7 @@ Biais B:
   On pourrait supposer que l'utilisation de capteurs plus précis comme le LiDAR ou la vision par caméra permettrait d'améliorer les performances du robot.
 
   De même que l'apprentissage supervisé, le réseau de neurone n'apprend pas à faire le tour du labyrinthe, mais plutôt à réagir à des situations spécifiques. Par exemple, il apprend à reculer face à un mur ou à tourner face à un obstacle, mais il ne développe pas une stratégie globale pour naviguer dans le labyrinthe. Il lui arrive de se retourner si un obstacle l'empêche de voir la bonne direction à prendre. De plus, la mauvaise perception des capteurs de Thymio selon le type d'obstacle (couleurs ou forme) empêche le réseau de percevoir les entrées réelles et donc d'avoir une sortie idéale pour la situation donnée.
+
+  Une technologie à explorer pour améliorer la compréhension sémantique de l'environnement serait l'utilisation de réseaux de neurones plus complexes comme les VLA (Vision-Language-Action). Il s'agit de LLM (Language Model) qui intègrent des capacités de vision et d'action, permettant au robot de comprendre les instructions en langage naturel tout en percevant son environnement visuellement. Cela pourrait permettre à Thymio de mieux interpréter les obstacles et les situations rencontrées, et d'adapter son comportement de manière plus intelligente et contextuelle.
   ]
   #v(40em)
